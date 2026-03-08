@@ -265,11 +265,32 @@ function checkScoreMilestones() {
   }
 }
 
+var ZAINAB_PARTICLES = ['💖', '💕', '✨', '💗', '💘', '✨', '💖', '💕'];
+
 function triggerZainabSkyEvent() {
   showFloatingMessage('✨ Something magical is happening…');
   const container = document.getElementById('zainab-sky-formation');
   if (!container) return;
-  container.innerHTML = '<div class="zainab-sky-card">✨ ZAINAB ✨</div>';
+  container.innerHTML = '';
+  const textEl = document.createElement('div');
+  textEl.className = 'zainab-sky-text';
+  textEl.setAttribute('aria-hidden', 'true');
+  textEl.textContent = 'ZAINAB';
+  container.appendChild(textEl);
+  const particleWrap = document.createElement('div');
+  particleWrap.className = 'zainab-sky-particles';
+  const count = 52;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('span');
+    p.className = 'zainab-sky-particle';
+    p.textContent = ZAINAB_PARTICLES[i % ZAINAB_PARTICLES.length];
+    p.style.left = (5 + Math.random() * 90) + '%';
+    p.style.top = (2 + Math.random() * 55) + '%';
+    p.style.animationDelay = (Math.random() * 2.5) + 's';
+    p.style.animationDuration = (2 + Math.random() * 2) + 's';
+    particleWrap.appendChild(p);
+  }
+  container.appendChild(particleWrap);
   container.classList.remove('hidden');
   container.classList.add('zainab-sky-show');
   setTimeout(() => {
@@ -278,7 +299,7 @@ function triggerZainabSkyEvent() {
       container.classList.add('hidden');
       container.innerHTML = '';
     }, 500);
-  }, 3500);
+  }, 3800);
 }
 
 function showScreen(screen) {

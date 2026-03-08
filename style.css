@@ -515,21 +515,54 @@ body.night-mode .start-heart {
   opacity: 1;
 }
 
-.zainab-sky-card {
-  padding: 16px 28px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(199, 21, 133, 0.35);
-  font-size: clamp(1.4rem, 4vw, 2rem);
-  font-weight: 700;
-  color: #c71585;
-  text-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
-  animation: zainabSkyCardPulse 1.2s ease-in-out infinite;
+.zainab-sky-text {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(2.2rem, 8vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow:
+    0 0 24px rgba(255, 105, 180, 0.7),
+    0 0 48px rgba(199, 21, 133, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  animation: zainabSkyTextGlow 1.5s ease-in-out infinite;
 }
 
-@keyframes zainabSkyCardPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
+@keyframes zainabSkyTextGlow {
+  0%, 100% { opacity: 0.92; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.08); }
+}
+
+.zainab-sky-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.zainab-sky-particle {
+  position: absolute;
+  font-size: clamp(12px, 2.8vw, 18px);
+  animation: zainabSkyParticleFloat 3s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes zainabSkyParticleFloat {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: translateY(12px) scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(24px) scale(1);
+    opacity: 0.4;
+  }
 }
 
 #game-screen.tap-mode #basket {

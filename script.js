@@ -23,19 +23,21 @@ let lastTapTime = 0;
 let heartRainEndTime = 0;
 let heartRainInterval = null;
 let haider150Shown = false;
+let lastAchievementTime = 0;
 
-const SECRET_SCORE = 100;
+const SECRET_SCORE = 600;
 const ZAINAB_HEART_CHANCE = 1 / 100;
 const ZAINAB_BONUS = 100;
 const HEART_RAIN_COMBO = 5;
 const HEART_RAIN_DURATION_MS = 3000;
 const HEART_RAIN_SPAWN_MS = 150;
 const HEART_RAIN_POINTS = 5;
-const HAIDER_150_SCORE = 150;
+const HAIDER_150_SCORE = 1200;
 
 // The Kite Runner quote — glitter heart every 250 score
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
-const QUOTE_SCORE_MILESTONE = 250;  // glitter heart (and quote when caught) at 250, 500, 750...
+const QUOTE_SCORE_MILESTONE = 250;  // glitter heart at 250, 500, 750...
+const QUOTE_OVERLAY_SCORE = 1800;
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -64,6 +66,7 @@ const GOLDEN_MESSAGE = "Golden Heart! You unlocked Haider's love 💛";
 const IDLE_MESSAGE = "Hey Zainab… hearts are falling 😄";
 const LOVE_BOOST_MESSAGE = "Love Boost Activated 💖";
 const COMBO_MESSAGE = "Love Combo! +30 points";
+const ACHIEVEMENT_COOLDOWN_MS = 20000;
 
 // Combo messages
 const COMBO_MESSAGES = [
@@ -83,6 +86,7 @@ const gameOverScreen = document.getElementById('game-over-screen');
 const btnBasketMode = document.getElementById('btn-basket-mode');
 const btnTapMode = document.getElementById('btn-tap-mode');
 const restartBtn = document.getElementById('restart-btn');
+const backToMenuBtn = document.getElementById('back-to-menu-btn');
 const secretMsgBtn = document.getElementById('secret-msg-btn');
 const secretMsgModal = document.getElementById('secret-msg-modal');
 const secretMsgClose = document.getElementById('secret-msg-close');
@@ -127,8 +131,8 @@ const COMBO_COUNT = 3;
 const COMBO_BONUS = 30;
 const IDLE_SEC = 6;
 const LOVE_BOOST_DURATION_MS = 10000;
-const SECRET_ENDING_SCORE = 120;
-const CELEBRATION_50_SCORE = 50;
+const SECRET_ENDING_SCORE = 2200;
+const CELEBRATION_50_SCORE = 300;
 const MIN_SCORE_FOR_FLOATING_MSG = 28;
 const MIN_SCORE_FOR_COMBO_MSG = 25;
 const BASE_FALL_SPEED = 2.8;
@@ -349,6 +353,7 @@ function resumeAfterZainabHeart() {
 
 function showHaider150Message() {
   pauseGame();
+  markAchievementShown();
   if (haider150Overlay) haider150Overlay.classList.remove('hidden');
 }
 
@@ -427,6 +432,14 @@ function showComboSparkle() {
   }, 700);
 }
 
+function markAchievementShown() {
+  lastAchievementTime = Date.now();
+}
+
+function canShowAchievement() {
+  return Date.now() - lastAchievementTime > ACHIEVEMENT_COOLDOWN_MS;
+}
+
 function endGame() {
   gameRunning = false;
   clearInterval(spawnInterval);
@@ -455,12 +468,14 @@ function resumeAfterSecret() {
 
 function showSecretUnlocked() {
   pauseGameForOverlay();
+  markAchievementShown();
   if (secretOverlayEl) secretOverlayEl.classList.remove('hidden');
 }
 
 function showQuoteSecret() {
   quoteSecretShownThisGame = true;
   pauseGameForOverlay();
+  markAchievementShown();
   if (quoteSecretOverlayEl) quoteSecretOverlayEl.classList.remove('hidden');
 }
 
@@ -477,6 +492,7 @@ function pauseGame() {
 
 function showCelebration50() {
   pauseGame();
+  markAchievementShown();
   if (celebration50El) {
     const stars = celebration50El.querySelector('.celebration-stars');
     if (stars) {
@@ -501,6 +517,7 @@ function resumeAfterCelebration50() {
 
 function showSecretEnding() {
   pauseGame();
+  markAchievementShown();
   if (secretEndingOverlay) secretEndingOverlay.classList.remove('hidden');
 }
 
@@ -562,28 +579,30 @@ function onHeartTapped(heartObj) {
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
-  if (score >= SECRET_ENDING_SCORE && !secretEndingShown) {
-    secretEndingShown = true;
-    showSecretEnding();
-    return;
-  }
-  if (score >= SECRET_SCORE && !secretShownThisGame) {
-    showSecretUnlocked();
-    return;
-  }
-  if (score >= QUOTE_SCORE_MILESTONE && !quoteSecretShownThisGame) {
-    showQuoteSecret();
-    return;
-  }
-  if (score >= HAIDER_150_SCORE && !haider150Shown) {
-    haider150Shown = true;
-    showHaider150Message();
-    return;
-  }
-  if (score >= CELEBRATION_50_SCORE && !celebration50Shown) {
-    celebration50Shown = true;
-    showCelebration50();
-    return;
+  if (canShowAchievement()) {
+    if (score >= CELEBRATION_50_SCORE && !celebration50Shown) {
+      celebration50Shown = true;
+      showCelebration50();
+      return;
+    }
+    if (score >= SECRET_SCORE && !secretShownThisGame) {
+      showSecretUnlocked();
+      return;
+    }
+    if (score >= HAIDER_150_SCORE && !haider150Shown) {
+      haider150Shown = true;
+      showHaider150Message();
+      return;
+    }
+    if (score >= SECRET_ENDING_SCORE && !secretEndingShown) {
+      secretEndingShown = true;
+      showSecretEnding();
+      return;
+    }
+    if (score >= QUOTE_OVERLAY_SCORE && !quoteSecretShownThisGame) {
+      showQuoteSecret();
+      return;
+    }
   }
   if (score >= nextGlitterAtScore) {
     nextGlitterAtScore += QUOTE_SCORE_MILESTONE;
@@ -807,6 +826,15 @@ document.addEventListener('touchmove', (e) => {
 if (btnBasketMode) btnBasketMode.addEventListener('click', () => startGame('basket'));
 if (btnTapMode) btnTapMode.addEventListener('click', () => startGame('tap'));
 restartBtn.addEventListener('click', () => startGame(gameMode));
+if (backToMenuBtn) backToMenuBtn.addEventListener('click', () => {
+  gameRunning = false;
+  clearInterval(spawnInterval);
+  cancelAnimationFrame(gameLoopId);
+  hearts.forEach(h => h.element.remove());
+  hearts = [];
+  showScreen(startScreen);
+  fillStartHearts();
+});
 if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSecret);
 if (quoteSecretContinueBtn) quoteSecretContinueBtn.addEventListener('click', resumeAfterQuoteSecret);
 if (celebration50Btn) celebration50Btn.addEventListener('click', resumeAfterCelebration50);

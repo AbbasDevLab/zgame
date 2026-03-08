@@ -34,8 +34,14 @@ let lastRandomHeartRainTime = 0;
 let audioInitialized = false;
 let isMuted = false;
 let slowMotionEndTime = 0;
+let zainabSkyEventShown = false;
 
 const SECRET_SCORE = 600;
+const ZAINAB_SKY_SCORE = 1500;
+const LETTER_HEART_POINTS = 5;
+const ZAINAB_SKY_FLY_MS = 1200;
+const ZAINAB_SKY_HOLD_MS = 3500;
+const ZAINAB_SKY_TOTAL_MS = ZAINAB_SKY_FLY_MS + ZAINAB_SKY_HOLD_MS;
 const ZAINAB_HEART_CHANCE = 1 / 100;
 const MYSTERY_HEART_CHANCE = 1 / 25;
 const MYSTERY_BONUS_POINTS = 50;
@@ -244,6 +250,10 @@ function checkScoreMilestones() {
     teaser1500Shown = true;
     enqueueAchievement('teaser-1500');
   }
+  if (!zainabSkyEventShown && score >= ZAINAB_SKY_SCORE) {
+    zainabSkyEventShown = true;
+    triggerZainabSkyEvent();
+  }
   if (!secret4000Shown && score >= SECRET_UNLOCK_SCORE) {
     secret4000Shown = true;
     enqueueAchievement('secret-4000');
@@ -255,6 +265,96 @@ function checkScoreMilestones() {
       startHeartRain();
     }
   }
+}
+
+// Letter grids for ZAINAB (4 cols 0-3, 5 rows 0-4). ~8–12 points each, ~58 total.
+const ZAINAB_LETTERS = [
+  [[0,0],[1,0],[2,0],[3,0],[2,1],[1,2],[0,3],[1,3],[2,3],[3,3]],                    // Z
+  [[1,0],[2,0],[0,1],[3,1],[0,2],[1,2],[2,2],[3,2],[0,3],[3,3],[0,4],[3,4]],        // A
+  [[1,0],[2,0],[1,1],[2,1],[1,2],[2,2],[1,3],[2,3],[1,4],[2,4]],                   // I
+  [[0,0],[0,1],[0,2],[0,3],[0,4],[1,3],[2,2],[3,0],[3,1],[3,2],[3,3],[3,4]],        // N
+  [[1,0],[2,0],[0,1],[3,1],[0,2],[1,2],[2,2],[3,2],[0,3],[3,3],[0,4],[3,4]],        // A
+  [[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[2,0],[3,0],[1,2],[2,2],[3,2],[1,4],[2,4],[3,4]] // B
+];
+
+function triggerZainabSkyEvent() {
+  showFloatingMessage('✨ Something magical is happening…');
+  const container = document.getElementById('zainab-sky-formation');
+  if (!container || !gameAreaEl) return;
+  const boxW = 0.14;
+  const boxH = 0.35;
+  const letterStarts = [0.02, 0.18, 0.34, 0.50, 0.66, 0.82];
+  container.innerHTML = '';
+  container.classList.remove('hidden');
+  container.classList.remove('zainab-sky-pulse');
+  const skyHearts = [];
+  const HEART = '💖';
+  ZAINAB_LETTERS.forEach((letter, li) => {
+    const left0 = letterStarts[li];
+    letter.forEach(([col, row]) => {
+      const leftPct = (left0 + (col / 3) * boxW) * 100;
+      const topPct = (row / 4) * boxH * 100;
+      const el = document.createElement('div');
+      el.className = 'zainab-sky-heart';
+      el.textContent = HEART;
+      el.style.left = '50%';
+      el.style.top = '85%';
+      el.dataset.left = String(leftPct);
+      el.dataset.top = String(topPct);
+      container.appendChild(el);
+      skyHearts.push({ el, leftPct, topPct });
+    });
+  });
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      skyHearts.forEach(({ el, leftPct, topPct }) => {
+        el.style.left = leftPct + '%';
+        el.style.top = topPct + '%';
+      });
+    });
+  });
+  const sparkleContainer = document.createElement('div');
+  sparkleContainer.className = 'zainab-sky-sparkles';
+  container.appendChild(sparkleContainer);
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('span');
+    s.className = 'zainab-sky-sparkle';
+    s.textContent = '✨';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 50 + '%';
+    s.style.animationDelay = (i * 0.1) + 's';
+    sparkleContainer.appendChild(s);
+  }
+  setTimeout(() => container.classList.add('zainab-sky-pulse'), ZAINAB_SKY_FLY_MS);
+  setTimeout(() => {
+    container.classList.remove('zainab-sky-pulse');
+    const gaRect = gameAreaEl.getBoundingClientRect();
+    skyHearts.forEach(({ el, leftPct, topPct }) => {
+      const leftPx = (leftPct / 100) * gaRect.width;
+      const xPct = (leftPx / gaRect.width) * 100;
+      const yPx = (topPct / 100) * gaRect.height;
+      el.remove();
+      const heart = document.createElement('div');
+      heart.className = 'heart letter-heart';
+      heart.innerHTML = HEART;
+      heart.style.left = xPct + '%';
+      heart.style.top = yPx + 'px';
+      heartsContainer.appendChild(heart);
+      const speed = 2.2 + Math.random() * 0.6;
+      hearts.push({
+        element: heart,
+        x: xPct,
+        y: yPx,
+        speed,
+        message: null,
+        isGolden: false,
+        isLetterHeart: true
+      });
+    });
+    sparkleContainer.remove();
+    container.classList.add('hidden');
+    container.innerHTML = '';
+  }, ZAINAB_SKY_TOTAL_MS);
 }
 
 function showScreen(screen) {
@@ -611,6 +711,7 @@ function removeHeart(heart, caught) {
   heart.element.remove();
   if (!caught) {
     if (heart.isRainHeart) return;
+    if (heart.isLetterHeart) return;
     if (Date.now() < loveBoostEndTime) return;
     catchStreak = 0;
     lives++;
@@ -881,6 +982,15 @@ function gameLoop() {
         removeHeart(heart, true);
         continue;
       }
+      if (heart.isLetterHeart) {
+        addScore(LETTER_HEART_POINTS);
+        if (score > getBestScore()) {
+          setBestScore(score);
+          updateBestScoreDisplay();
+        }
+        removeHeart(heart, true);
+        continue;
+      }
       if (heart.isRainHeart) {
         addScore(HEART_RAIN_POINTS);
         playSfx(sfxHeartRainEl);
@@ -951,6 +1061,7 @@ function startGame(mode) {
   haider150Shown = false;
    teaser1500Shown = false;
    secret4000Shown = false;
+   zainabSkyEventShown = false;
    achievementQueue = [];
    achievementShowing = false;
    lastAchievementTime = 0;

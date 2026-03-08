@@ -154,6 +154,9 @@ body {
 
 #score-display {
   left: 16px;
+  max-width: calc(50% - 24px);
+  line-height: 1.35;
+  word-wrap: break-word;
 }
 
 .best-score {
@@ -164,6 +167,8 @@ body {
 
 #lives-display {
   right: 16px;
+  white-space: nowrap;
+  text-align: right;
 }
 
 #lives-display.warning {

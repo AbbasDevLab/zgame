@@ -4,18 +4,14 @@ let lives = 0;
 let gameRunning = false;
 let basketX = 50;
 let hearts = [];
-let spawnTimeout;
+let spawnInterval;
 let gameLoopId;
 let floatingMessageTimeout;
 let catchStreak = 0;
-let lastSpeedLevel = 0;
-let gameStartTime = 0;
-let quoteShownThisGame = false;
 
-// The Kite Runner quote (special for Zainab)
-const KITE_RUNNER_QUOTE = "For you a thousand times over";
-const QUOTE_MILESTONE_SCORE = 100;  // show quote when she hits 100 points
-const QUOTE_HEART_CHANCE = 0.09;    // 9% of special hearts are the quote heart
+// The Kite Runner quote — show like other messages when she catches a special heart
+const KITE_RUNNER_QUOTE = "For you a thousand times over — The Kite Runner";
+const QUOTE_HEART_CHANCE = 0.12;  // some special hearts show this quote
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -47,16 +43,6 @@ const COMBO_MESSAGES = [
   [10, "10 in a row! Haider's heart is yours! 💘"]
 ];
 
-// Level-up messages when speed increases
-const LEVEL_NAMES = [
-  "Warm up 💗",
-  "More love! 💕",
-  "Hearts everywhere! 💖",
-  "Speed of love! 💨",
-  "Super love mode! ✨",
-  "Maximum love! 💘"
-];
-
 // DOM elements
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
@@ -69,8 +55,6 @@ const gameArea = document.getElementById('game-area');
 const basket = document.getElementById('basket');
 const heartsContainer = document.getElementById('hearts-container');
 const floatingMessageEl = document.getElementById('floating-message');
-const levelBadgeEl = document.getElementById('level-badge');
-const quoteOverlayEl = document.getElementById('quote-overlay');
 const catchBurstEl = document.getElementById('catch-burst');
 const finalScoreEl = document.getElementById('final-score');
 const livesDisplay = document.getElementById('lives-display');
@@ -81,9 +65,7 @@ const POINTS_PER_HEART = 10;
 const BASE_FALL_SPEED = 2;
 const MAX_FALL_SPEED = 5.5;
 const SPEED_UP_EVERY_POINTS = 25;
-const BASE_SPAWN_MS = 1600;
-const MIN_SPAWN_MS = 750;
-const SPAWN_FASTER_EVERY_POINTS = 30;
+const SPAWN_RATE_MS = 1500;
 
 function showScreen(screen) {
   startScreen.classList.add('hidden');
@@ -103,25 +85,6 @@ function getCurrentSpeed() {
   return Math.min(MAX_FALL_SPEED, base);
 }
 
-function getSpawnInterval() {
-  const level = Math.floor(score / SPAWN_FASTER_EVERY_POINTS);
-  const reduction = level * 80;
-  return Math.max(MIN_SPAWN_MS, BASE_SPAWN_MS - reduction);
-}
-
-function showLevelBadge(text) {
-  levelBadgeEl.textContent = text;
-  levelBadgeEl.classList.remove('hidden');
-  levelBadgeEl.classList.remove('level-badge-out');
-  levelBadgeEl.offsetHeight;
-  levelBadgeEl.classList.add('level-badge-in');
-  setTimeout(() => {
-    levelBadgeEl.classList.remove('level-badge-in');
-    levelBadgeEl.classList.add('level-badge-out');
-    setTimeout(() => levelBadgeEl.classList.add('hidden'), 500);
-  }, 2000);
-}
-
 function showFloatingMessage(text) {
   if (floatingMessageTimeout) clearTimeout(floatingMessageTimeout);
   floatingMessageEl.textContent = text;
@@ -130,23 +93,6 @@ function showFloatingMessage(text) {
     floatingMessageEl.classList.add('hidden');
   }, 1500);
 }
-
-function showKiteRunnerQuote() {
-  if (quoteOverlayTimeout) clearTimeout(quoteOverlayTimeout);
-  quoteOverlayEl.classList.remove('hidden');
-  quoteOverlayEl.classList.remove('quote-overlay-out');
-  quoteOverlayEl.offsetHeight;
-  quoteOverlayEl.classList.add('quote-overlay-in');
-  quoteOverlayTimeout = setTimeout(() => {
-    quoteOverlayEl.classList.remove('quote-overlay-in');
-    quoteOverlayEl.classList.add('quote-overlay-out');
-    quoteOverlayTimeout = setTimeout(() => {
-      quoteOverlayEl.classList.add('hidden');
-      quoteOverlayEl.classList.remove('quote-overlay-out');
-    }, 600);
-  }, 4000);
-}
-let quoteOverlayTimeout;
 
 function playCatchBurst(clientX, clientY) {
   catchBurstEl.innerHTML = '';
@@ -181,10 +127,8 @@ function spawnHeart() {
   const isSpecial = Math.random() < 0.4;
   if (isSpecial) {
     heart.classList.add('special');
-    // Rare chance: this heart carries the Kite Runner quote (when caught, show the special overlay)
     const isQuoteHeart = Math.random() < QUOTE_HEART_CHANCE;
     heart.dataset.message = isQuoteHeart ? KITE_RUNNER_QUOTE : CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)];
-    if (isQuoteHeart) heart.classList.add('quote-heart');
   }
   const x = 5 + Math.random() * 90;
   heart.style.left = x + '%';
@@ -238,7 +182,7 @@ function removeHeart(heart, caught) {
 
 function endGame() {
   gameRunning = false;
-  clearTimeout(spawnTimeout);
+  clearInterval(spawnInterval);
   cancelAnimationFrame(gameLoopId);
   hearts.forEach(h => h.element.remove());
   hearts = [];
@@ -250,16 +194,6 @@ function endGame() {
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
-  // Milestone: 100 points — show The Kite Runner quote once per game
-  if (score >= QUOTE_MILESTONE_SCORE && !quoteShownThisGame) {
-    quoteShownThisGame = true;
-    showKiteRunnerQuote();
-  }
-  const speedLevel = getSpeedLevel();
-  if (speedLevel > lastSpeedLevel && speedLevel < LEVEL_NAMES.length) {
-    lastSpeedLevel = speedLevel;
-    showLevelBadge(LEVEL_NAMES[speedLevel]);
-  }
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
     heart.y += heart.speed;
@@ -268,18 +202,13 @@ function gameLoop() {
       catchStreak++;
       score += POINTS_PER_HEART;
       scoreEl.textContent = score;
-      // Kite Runner quote: show the special overlay when she catches the quote heart or hits the milestone
-      if (heart.message === KITE_RUNNER_QUOTE) {
-        quoteShownThisGame = true;
-        showKiteRunnerQuote();
-      } else if (score === QUOTE_MILESTONE_SCORE && !quoteShownThisGame) {
-        quoteShownThisGame = true;
-        showKiteRunnerQuote();
+      // Show message like before: quote, combo, or heart message
+      if (heart.message) {
+        showFloatingMessage(heart.message);
       } else {
         const comboMsg = COMBO_MESSAGES.find(([n]) => n === catchStreak);
         if (comboMsg) showFloatingMessage(comboMsg[1]);
-        else if (heart.message) showFloatingMessage(heart.message);
-        else if (Math.random() < 0.3) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
+        else if (Math.random() < 0.25) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
       }
       removeHeart(heart, true);
       continue;
@@ -295,9 +224,6 @@ function startGame() {
   score = 0;
   lives = 0;
   catchStreak = 0;
-  lastSpeedLevel = 0;
-  quoteShownThisGame = false;
-  gameStartTime = Date.now();
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');
@@ -305,17 +231,8 @@ function startGame() {
   basketX = 50;
   updateBasketPosition();
   showScreen(gameScreen);
-  levelBadgeEl.classList.add('hidden');
-  showLevelBadge(LEVEL_NAMES[0]);
   spawnHeart();
-  function scheduleNextSpawn() {
-    if (!gameRunning) return;
-    spawnTimeout = setTimeout(() => {
-      spawnHeart();
-      scheduleNextSpawn();
-    }, getSpawnInterval());
-  }
-  spawnTimeout = setTimeout(scheduleNextSpawn, getSpawnInterval());
+  spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 

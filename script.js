@@ -41,6 +41,8 @@ const ZAINAB_SKY_SCORE = 1500;
 const ZAINAB_HEART_CHANCE = 1 / 100;
 const MYSTERY_HEART_CHANCE = 1 / 25;
 const MYSTERY_BONUS_POINTS = 50;
+const BROWN_HEART_CHANCE = 1 / 30;
+const BROWN_BONUS_POINTS = 100;
 const MYSTERY_DOUBLE_SCORE_MS = 5000;
 const SLOW_MOTION_DURATION_MS = 5000;
 const ZAINAB_BONUS = 100;
@@ -383,6 +385,27 @@ function playCatchBurst(clientX, clientY) {
   }, 600);
 }
 
+function playBrownBurst(clientX, clientY) {
+  catchBurstEl.innerHTML = '';
+  catchBurstEl.classList.remove('hidden');
+  catchBurstEl.classList.add('brown-burst');
+  const count = 7;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('span');
+    s.className = 'burst-piece burst-piece-brown';
+    s.textContent = '🤎';
+    s.style.setProperty('--angle', (i * (360 / count)) + 'deg');
+    catchBurstEl.appendChild(s);
+  }
+  catchBurstEl.style.left = clientX + 'px';
+  catchBurstEl.style.top = clientY + 'px';
+  setTimeout(() => {
+    catchBurstEl.classList.remove('brown-burst');
+    catchBurstEl.classList.add('hidden');
+    catchBurstEl.innerHTML = '';
+  }, 700);
+}
+
 function updateBasketPosition() {
   const maxX = 100 - BASKET_WIDTH;
   basketX = Math.max(0, Math.min(maxX, basketX));
@@ -403,6 +426,11 @@ function spawnHeart() {
   const isMystery = !isHeartRainActive() && Math.random() < MYSTERY_HEART_CHANCE;
   if (isMystery) {
     spawnMysteryHeart();
+    return;
+  }
+  const isBrown = !isHeartRainActive() && Math.random() < BROWN_HEART_CHANCE;
+  if (isBrown) {
+    spawnBrownHeart();
     return;
   }
   const heart = document.createElement('div');
@@ -471,6 +499,28 @@ function spawnMysteryHeart() {
     message: null,
     isGolden: false,
     isMysteryHeart: true
+  });
+}
+
+function spawnBrownHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart brown-heart';
+  heart.innerHTML = '🤎';
+  heart.title = 'Bonus!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const baseSpeed = getCurrentSpeed();
+  const speed = baseSpeed * 0.82 + Math.random() * 0.2;
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed,
+    message: null,
+    isGolden: false,
+    isBrownHeart: true
   });
 }
 
@@ -900,6 +950,20 @@ function gameLoop() {
       }
       if (heart.isMysteryHeart) {
         applyMysteryEffect();
+        playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isBrownHeart) {
+        addScore(BROWN_BONUS_POINTS);
+        if (score > getBestScore()) {
+          setBestScore(score);
+          updateBestScoreDisplay();
+        }
+        showFloatingMessage('🤎 Bonus Heart! +100 Points');
+        const rect = heart.element.getBoundingClientRect();
+        playBrownBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        showComboSparkle();
         playSfx(sfxGoldenEl);
         removeHeart(heart, true);
         continue;

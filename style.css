@@ -608,6 +608,22 @@ body.night-mode .start-heart {
   to   { transform: scale(1.1); opacity: 1; }
 }
 
+.heart.brown-heart {
+  font-size: clamp(26px, 4.2vw, 36px);
+  filter: drop-shadow(0 0 8px rgba(139, 69, 19, 0.7)) drop-shadow(0 0 14px rgba(160, 82, 45, 0.5)) drop-shadow(0 2px 4px rgba(101, 67, 33, 0.4));
+  animation: brownHeartGlow 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes brownHeartGlow {
+  from { opacity: 0.92; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1.05); }
+}
+
+.burst-piece-brown {
+  font-size: 16px;
+  opacity: 0.95;
+}
+
 .heart.golden-heart {
   font-size: 34px;
   filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.95));

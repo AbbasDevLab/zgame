@@ -101,7 +101,7 @@ const livesDisplay = document.getElementById('lives-display');
 const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 10;
 const HEART_SPAWN_MAX = 90;
-const MAX_LIVES = 5;
+const MAX_LIVES = 3;
 const POINTS_PER_HEART = 10;
 const TAP_POINTS = 5;
 const GOLDEN_POINTS = 50;
@@ -112,10 +112,12 @@ const IDLE_SEC = 6;
 const LOVE_BOOST_DURATION_MS = 10000;
 const SECRET_ENDING_SCORE = 120;
 const CELEBRATION_50_SCORE = 50;
-const BASE_FALL_SPEED = 2;
-const MAX_FALL_SPEED = 5.5;
-const SPEED_UP_EVERY_POINTS = 25;
-const SPAWN_RATE_MS = 1500;
+const MIN_SCORE_FOR_FLOATING_MSG = 28;
+const MIN_SCORE_FOR_COMBO_MSG = 25;
+const BASE_FALL_SPEED = 2.8;
+const MAX_FALL_SPEED = 5.2;
+const SPEED_UP_EVERY_POINTS = 30;
+const SPAWN_RATE_MS = 1350;
 const BEST_SCORE_KEY = 'zgame_best_score';
 
 const TAGLINES = [
@@ -227,7 +229,7 @@ function spawnHeart() {
     element: heart,
     x: x,
     y: 0,
-    speed: speed + Math.random() * 0.8,
+    speed: speed + Math.random() * 0.35,
     message: heart.dataset.message || null,
     isGolden: isGolden
   });
@@ -247,7 +249,7 @@ function spawnGlitterHeart() {
     element: heart,
     x: x,
     y: 0,
-    speed: speed + Math.random() * 0.5,
+    speed: speed + Math.random() * 0.35,
     message: KITE_RUNNER_QUOTE,
     isGlitterHeart: true
   });
@@ -397,13 +399,15 @@ function onHeartTapped(heartObj) {
   addScore(pts);
   if (catchStreak === COMBO_COUNT) {
     addScore(COMBO_BONUS);
-    showFloatingMessage(COMBO_MESSAGE);
-    showComboSparkle();
+    if (score >= MIN_SCORE_FOR_COMBO_MSG) {
+      showFloatingMessage(COMBO_MESSAGE);
+      showComboSparkle();
+    }
   } else if (heartObj.isGolden) {
     showFloatingMessage(GOLDEN_MESSAGE);
   } else if (heartObj.isGlitterHeart) {
     showFloatingMessage(KITE_RUNNER_QUOTE);
-  } else if (Math.random() < 0.35) {
+  } else if (score >= MIN_SCORE_FOR_FLOATING_MSG && Math.random() < 0.22) {
     showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
   }
   hapticCatch();
@@ -451,10 +455,14 @@ function gameLoop() {
       catchStreak++;
       const pts = heart.isGolden ? GOLDEN_POINTS : POINTS_PER_HEART;
       addScore(pts);
+      const showMsg = score >= MIN_SCORE_FOR_FLOATING_MSG;
+      const showComboPopup = score >= MIN_SCORE_FOR_COMBO_MSG;
       if (catchStreak === COMBO_COUNT) {
         addScore(COMBO_BONUS);
-        showFloatingMessage(COMBO_MESSAGE);
-        showComboSparkle();
+        if (showComboPopup) {
+          showFloatingMessage(COMBO_MESSAGE);
+          showComboSparkle();
+        }
       } else if (heart.isGolden) {
         showFloatingMessage(GOLDEN_MESSAGE);
       } else if (heart.isGlitterHeart) {
@@ -462,12 +470,12 @@ function gameLoop() {
       } else if (bestScoreAtStartOfGame > 0 && score > bestScoreAtStartOfGame && !newBestShownThisGame) {
         newBestShownThisGame = true;
         showFloatingMessage('New best! 🎉');
-      } else if (heart.message) {
+      } else if (showMsg && heart.message) {
         showFloatingMessage(heart.message);
-      } else {
+      } else if (showMsg) {
         const comboMsg = COMBO_MESSAGES.find(([n]) => n === catchStreak);
         if (comboMsg) showFloatingMessage(comboMsg[1]);
-        else if (Math.random() < 0.3) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
+        else if (Math.random() < 0.2) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
       }
       hapticCatch();
       if (score > getBestScore()) {

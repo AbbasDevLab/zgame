@@ -11,6 +11,9 @@ let catchStreak = 0;
 let nextGlitterAtScore;
 let bestScoreAtStartOfGame = 0;
 let newBestShownThisGame = false;
+let secretShownThisGame = false;
+
+const SECRET_SCORE = 100;  // surprise message when she hits 100
 
 // The Kite Runner quote — glitter heart every 250 score
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
@@ -60,6 +63,8 @@ const basket = document.getElementById('basket');
 const heartsContainer = document.getElementById('hearts-container');
 const floatingMessageEl = document.getElementById('floating-message');
 const catchBurstEl = document.getElementById('catch-burst');
+const secretOverlayEl = document.getElementById('secret-overlay');
+const secretContinueBtn = document.getElementById('secret-continue-btn');
 const finalScoreEl = document.getElementById('final-score');
 const bestScoreEl = document.getElementById('best-score');
 const livesDisplay = document.getElementById('lives-display');
@@ -252,9 +257,28 @@ function endGame() {
   fillGameOverHearts();
 }
 
+function showSecretUnlocked() {
+  secretShownThisGame = true;
+  gameRunning = false;
+  clearInterval(spawnInterval);
+  cancelAnimationFrame(gameLoopId);
+  secretOverlayEl.classList.remove('hidden');
+}
+
+function resumeAfterSecret() {
+  secretOverlayEl.classList.add('hidden');
+  gameRunning = true;
+  spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
+  gameLoopId = requestAnimationFrame(gameLoop);
+}
+
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
+  if (score >= SECRET_SCORE && !secretShownThisGame) {
+    showSecretUnlocked();
+    return;
+  }
   if (score >= nextGlitterAtScore) {
     nextGlitterAtScore += QUOTE_SCORE_MILESTONE;
     spawnGlitterHeart();
@@ -302,6 +326,8 @@ function startGame() {
   nextGlitterAtScore = QUOTE_SCORE_MILESTONE;  // first glitter at 250, then 500, 750...
   bestScoreAtStartOfGame = getBestScore();
   newBestShownThisGame = false;
+  secretShownThisGame = false;
+  if (secretOverlayEl) secretOverlayEl.classList.add('hidden');
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');
@@ -409,3 +435,4 @@ gameArea.addEventListener('touchmove', (e) => {
 
 startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', startGame);
+if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSecret);

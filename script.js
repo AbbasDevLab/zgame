@@ -65,6 +65,8 @@ const bestScoreEl = document.getElementById('best-score');
 const livesDisplay = document.getElementById('lives-display');
 
 const BASKET_WIDTH = 12;
+const HEART_SPAWN_MIN = 10;   // % - so basket can reach (basket center goes 6% to 94%)
+const HEART_SPAWN_MAX = 90;
 const MAX_LIVES = 3;
 const POINTS_PER_HEART = 10;
 const BASE_FALL_SPEED = 2;
@@ -168,7 +170,7 @@ function spawnHeart() {
     heart.classList.add('special');
     heart.dataset.message = CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)];
   }
-  const x = 5 + Math.random() * 90;
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
   heart.style.left = x + '%';
   heartsContainer.appendChild(heart);
   const speed = getCurrentSpeed();
@@ -187,7 +189,7 @@ function spawnGlitterHeart() {
   heart.className = 'heart special glitter-heart';
   heart.innerHTML = '✨💖✨';
   heart.dataset.message = KITE_RUNNER_QUOTE;
-  const x = 15 + Math.random() * 70;
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
   heart.style.left = x + '%';
   heartsContainer.appendChild(heart);
   const speed = getCurrentSpeed();

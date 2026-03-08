@@ -21,15 +21,29 @@
   <div id="game-screen" class="hidden">
     <div id="score-display">Score: <span id="score">0</span><span id="best-score" class="best-score hidden"></span></div>
     <div id="lives-display">Hearts missed: <span id="lives">0</span> / 3</div>
+
+    <!-- Secret at 100 score -->
     <div id="secret-overlay" class="secret-overlay hidden">
       <div class="secret-card">
         <p class="secret-badge">🎉 Secret Unlocked</p>
         <p class="secret-line1">Zainab, you caught enough hearts.</p>
         <p class="secret-line2">But you already caught Haider's heart first ❤️</p>
-        <p class="secret-line3">I love you so much Zainab</p>
+        <p class="secret-line3">This moment is what she will remember.</p>
         <button id="secret-continue-btn" class="btn secret-btn">Continue</button>
       </div>
     </div>
+
+    <!-- Kite Runner quote at 250 score -->
+    <div id="quote-secret-overlay" class="secret-overlay hidden">
+      <div class="secret-card">
+        <p class="secret-badge">🎉 Secret Unlocked</p>
+        <p class="secret-line1">For you a thousand times over</p>
+        <p class="secret-line2">— The Kite Runner</p>
+        <p class="secret-line3">Haider saved this quote just for you.</p>
+        <button id="quote-secret-continue-btn" class="btn secret-btn">Continue</button>
+      </div>
+    </div>
+
     <div id="floating-message" class="hidden"></div>
     <div id="catch-burst" class="hidden"></div>
     <div id="game-area">

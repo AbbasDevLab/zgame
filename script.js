@@ -31,6 +31,7 @@ const CUTE_MESSAGES = [
   "You've got this! 💖",
   "So much love for you",
   "Best catch ever! 🎯"
+  "Good job Zainab! 💕",
 ];
 
 // Combo messages
@@ -58,6 +59,7 @@ const heartsContainer = document.getElementById('hearts-container');
 const floatingMessageEl = document.getElementById('floating-message');
 const catchBurstEl = document.getElementById('catch-burst');
 const finalScoreEl = document.getElementById('final-score');
+const bestScoreEl = document.getElementById('best-score');
 const livesDisplay = document.getElementById('lives-display');
 
 const BASKET_WIDTH = 12;
@@ -67,6 +69,15 @@ const BASE_FALL_SPEED = 2;
 const MAX_FALL_SPEED = 5.5;
 const SPEED_UP_EVERY_POINTS = 25;
 const SPAWN_RATE_MS = 1500;
+const BEST_SCORE_KEY = 'zgame_best_score';
+
+const TAGLINES = [
+  'Every heart is for you 💕',
+  'Made with love by Haider',
+  'For Zainab only ✨'
+];
+const EASTER_EGG_MESSAGE = "You found it! Made with so much love for you, Zainab. — Haider 💕";
+const EASTER_EGG_TAPS = 5;
 
 function showScreen(screen) {
   startScreen.classList.add('hidden');
@@ -93,6 +104,31 @@ function showFloatingMessage(text) {
   floatingMessageTimeout = setTimeout(() => {
     floatingMessageEl.classList.add('hidden');
   }, 1500);
+}
+
+function hapticCatch() {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(12);
+}
+
+function getBestScore() {
+  try {
+    return parseInt(localStorage.getItem(BEST_SCORE_KEY) || '0', 10);
+  } catch (_) { return 0; }
+}
+
+function setBestScore(n) {
+  try { localStorage.setItem(BEST_SCORE_KEY, String(n)); } catch (_) {}
+}
+
+function updateBestScoreDisplay() {
+  const best = getBestScore();
+  if (best > 0) {
+    bestScoreEl.textContent = ' · Best: ' + best;
+    bestScoreEl.classList.remove('hidden');
+  } else {
+    bestScoreEl.textContent = '';
+    bestScoreEl.classList.add('hidden');
+  }
 }
 
 function playCatchBurst(clientX, clientY) {
@@ -206,6 +242,7 @@ function endGame() {
   hearts.forEach(h => h.element.remove());
   hearts = [];
   finalScoreEl.textContent = score;
+  if (score > getBestScore()) setBestScore(score);
   showScreen(gameOverScreen);
   fillGameOverHearts();
 }
@@ -225,8 +262,17 @@ function gameLoop() {
       catchStreak++;
       score += POINTS_PER_HEART;
       scoreEl.textContent = score;
-      // Show message like before: quote, combo, or heart message
-      if (heart.message) {
+      hapticCatch();
+      const prevBest = getBestScore();
+      if (score > prevBest) {
+        setBestScore(score);
+        updateBestScoreDisplay();
+      }
+      if (heart.message === KITE_RUNNER_QUOTE) {
+        showFloatingMessage(heart.message);
+      } else if (score > prevBest) {
+        showFloatingMessage('New best! 🎉');
+      } else if (heart.message) {
         showFloatingMessage(heart.message);
       } else {
         const comboMsg = COMBO_MESSAGES.find(([n]) => n === catchStreak);
@@ -255,6 +301,7 @@ function startGame() {
   basketX = 50;
   updateBasketPosition();
   showScreen(gameScreen);
+  updateBestScoreDisplay();
   spawnHeart();
   spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
@@ -291,6 +338,36 @@ function fillGameOverHearts() {
 }
 
 fillStartHearts();
+
+// Rotating tagline on start screen
+const taglineEl = document.getElementById('tagline');
+if (taglineEl) {
+  let taglineIdx = 0;
+  taglineEl.textContent = TAGLINES[0];
+  setInterval(() => {
+    taglineIdx = (taglineIdx + 1) % TAGLINES.length;
+    taglineEl.textContent = TAGLINES[taglineIdx];
+  }, 3500);
+}
+
+// Easter egg: tap title 5 times
+const titleEl = document.getElementById('game-title');
+const easterEggEl = document.getElementById('easter-egg-msg');
+if (titleEl && easterEggEl) {
+  let tapCount = 0;
+  let tapReset = null;
+  titleEl.addEventListener('click', () => {
+    tapCount++;
+    clearTimeout(tapReset);
+    tapReset = setTimeout(() => { tapCount = 0; }, 800);
+    if (tapCount >= EASTER_EGG_TAPS) {
+      tapCount = 0;
+      easterEggEl.textContent = EASTER_EGG_MESSAGE;
+      easterEggEl.classList.remove('hidden');
+      setTimeout(() => easterEggEl.classList.add('hidden'), 5000);
+    }
+  });
+}
 
 // Controls
 document.addEventListener('keydown', (e) => {

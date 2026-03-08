@@ -68,9 +68,44 @@ body {
 .intro-message {
   font-size: clamp(1rem, 2.5vw, 1.25rem);
   color: #8b4789;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
   max-width: 400px;
   line-height: 1.6;
+}
+
+.tagline {
+  font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+  color: #b08090;
+  margin-bottom: 28px;
+  min-height: 1.4em;
+  transition: opacity 0.4s ease;
+}
+
+#game-title {
+  cursor: pointer;
+}
+
+.easter-egg-msg {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(199, 21, 133, 0.25);
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  color: #8b4789;
+  text-align: center;
+  line-height: 1.5;
+  z-index: 200;
+  animation: eggIn 0.4s ease-out;
+}
+
+@keyframes eggIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .btn {
@@ -119,6 +154,12 @@ body {
 
 #score-display {
   left: 16px;
+}
+
+.best-score {
+  font-weight: 500;
+  color: #b08090;
+  margin-left: 4px;
 }
 
 #lives-display {
@@ -305,8 +346,15 @@ body {
 .end-message {
   font-size: clamp(1rem, 2.5vw, 1.25rem);
   color: #8b4789;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
   max-width: 320px;
+}
+
+.sign-off {
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
+  color: #b08090;
+  font-style: italic;
+  margin-bottom: 28px;
 }
 
 #game-over-screen {

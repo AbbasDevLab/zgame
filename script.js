@@ -275,7 +275,7 @@ function gameLoop() {
       }
       if (heart.isGlitterHeart) {
         showFloatingMessage(KITE_RUNNER_QUOTE);
-      } else if (score > bestScoreAtStartOfGame && !newBestShownThisGame) {
+      } else if (bestScoreAtStartOfGame > 0 && score > bestScoreAtStartOfGame && !newBestShownThisGame) {
         newBestShownThisGame = true;
         showFloatingMessage('New best! 🎉');
       } else if (heart.message) {

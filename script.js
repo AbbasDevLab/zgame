@@ -30,8 +30,8 @@ const CUTE_MESSAGES = [
   "Love you Zainab!",
   "You've got this! 💖",
   "So much love for you",
-  "Best catch ever! 🎯"
-  "Good job Zainab! 💕",
+  "Best catch ever! 🎯",
+  "Good job Zainab! 💕"
 ];
 
 // Combo messages

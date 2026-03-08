@@ -9,6 +9,8 @@ let gameLoopId;
 let floatingMessageTimeout;
 let catchStreak = 0;
 let glitterHeartSpawnedAt250 = false;
+let bestScoreAtStartOfGame = 0;
+let newBestShownThisGame = false;
 
 // The Kite Runner quote — glitter heart at 250 score
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
@@ -270,7 +272,8 @@ function gameLoop() {
       }
       if (heart.message === KITE_RUNNER_QUOTE) {
         showFloatingMessage(heart.message);
-      } else if (score > prevBest) {
+      } else if (score > bestScoreAtStartOfGame && !newBestShownThisGame) {
+        newBestShownThisGame = true;
         showFloatingMessage('New best! 🎉');
       } else if (heart.message) {
         showFloatingMessage(heart.message);
@@ -294,6 +297,8 @@ function startGame() {
   lives = 0;
   catchStreak = 0;
   glitterHeartSpawnedAt250 = false;
+  bestScoreAtStartOfGame = getBestScore();
+  newBestShownThisGame = false;
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');

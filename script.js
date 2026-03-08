@@ -8,7 +8,7 @@ let spawnInterval;
 let gameLoopId;
 let floatingMessageTimeout;
 let catchStreak = 0;
-let nextGlitterAtScore = QUOTE_SCORE_MILESTONE;  // spawn glitter heart at 250, then 500, 750...
+let nextGlitterAtScore;
 let bestScoreAtStartOfGame = 0;
 let newBestShownThisGame = false;
 
@@ -298,7 +298,7 @@ function startGame() {
   score = 0;
   lives = 0;
   catchStreak = 0;
-  nextGlitterAtScore = QUOTE_SCORE_MILESTONE;
+  nextGlitterAtScore = QUOTE_SCORE_MILESTONE;  // first glitter at 250, then 500, 750...
   bestScoreAtStartOfGame = getBestScore();
   newBestShownThisGame = false;
   scoreEl.textContent = '0';

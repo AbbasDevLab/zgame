@@ -23,6 +23,33 @@ body {
   min-height: 100vh;
   padding: 20px;
   text-align: center;
+  position: relative;
+}
+
+#start-hearts {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.start-heart {
+  position: absolute;
+  bottom: -30px;
+  font-size: 1.5rem;
+  opacity: 0.6;
+  animation: floatUp 6s ease-in infinite;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-110vh) rotate(360deg);
+    opacity: 0.2;
+  }
 }
 
 .game-title {
@@ -102,6 +129,132 @@ body {
   color: #c71585;
   animation: blink 0.5s ease-in-out 3;
 }
+
+/* Level badge when speed goes up */
+#level-badge {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 24px;
+  background: linear-gradient(135deg, rgba(255, 182, 193, 0.95), rgba(255, 105, 180, 0.95));
+  border-radius: 30px;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-weight: 700;
+  color: #8b0045;
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(199, 21, 133, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+#level-badge.level-badge-in {
+  animation: levelPop 0.4s ease-out;
+}
+
+#level-badge.level-badge-out {
+  animation: levelFade 0.5s ease-in forwards;
+}
+
+@keyframes levelPop {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  70% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes levelFade {
+  to { opacity: 0; transform: translate(-50%, -55%) scale(1.02); }
+}
+
+/* The Kite Runner quote overlay */
+#quote-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 228, 235, 0.92);
+  padding: 24px;
+  pointer-events: none;
+}
+
+#quote-overlay .quote-text {
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+  color: #8b0045;
+  text-align: center;
+  line-height: 1.4;
+  max-width: 20ch;
+  margin-bottom: 12px;
+  text-shadow: 0 1px 2px rgba(139, 0, 69, 0.15);
+}
+
+#quote-overlay .quote-attribution {
+  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+  color: #a0526e;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+#quote-overlay.quote-overlay-in {
+  animation: quoteFadeIn 0.6s ease-out;
+}
+
+#quote-overlay.quote-overlay-out {
+  animation: quoteFadeOut 0.6s ease-in forwards;
+}
+
+@keyframes quoteFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes quoteFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Rare quote heart - subtle golden glow */
+.heart.quote-heart {
+  filter: drop-shadow(0 0 6px rgba(218, 165, 32, 0.6)) drop-shadow(0 2px 4px rgba(199, 21, 133, 0.3);
+}
+
+/* Catch burst effect */
+#catch-burst {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 90;
+}
+
+.burst-piece {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 18px;
+  opacity: 0;
+}
+
+.burst-piece:nth-child(1) { animation: burstOut1 0.55s ease-out forwards; }
+.burst-piece:nth-child(2) { animation: burstOut2 0.55s ease-out forwards; }
+.burst-piece:nth-child(3) { animation: burstOut3 0.55s ease-out forwards; }
+.burst-piece:nth-child(4) { animation: burstOut4 0.55s ease-out forwards; }
+.burst-piece:nth-child(5) { animation: burstOut5 0.55s ease-out forwards; }
+.burst-piece:nth-child(6) { animation: burstOut6 0.55s ease-out forwards; }
+.burst-piece:nth-child(7) { animation: burstOut7 0.55s ease-out forwards; }
+.burst-piece:nth-child(8) { animation: burstOut8 0.55s ease-out forwards; }
+
+@keyframes burstOut1 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -95px) scale(0.4); } }
+@keyframes burstOut2 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + 32px), calc(-50% - 32px)) scale(0.4); } }
+@keyframes burstOut3 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(0px, -95px) scale(0.4); } }
+@keyframes burstOut4 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(32px, calc(-50% - 32px)) scale(0.4); } }
+@keyframes burstOut5 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -5px) scale(0.4); } }
+@keyframes burstOut6 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% - 32px), calc(-50% - 32px)) scale(0.4); } }
+@keyframes burstOut7 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-100px, -50px) scale(0.4); } }
+@keyframes burstOut8 { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + 32px), calc(-50% - 32px)) scale(0.4); } }
 
 @keyframes blink {
   50% { opacity: 0.5; }
@@ -233,6 +386,36 @@ body {
   color: #8b4789;
   margin-bottom: 32px;
   max-width: 320px;
+}
+
+#game-over-screen {
+  position: relative;
+}
+
+#gameover-hearts {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gameover-heart {
+  position: absolute;
+  bottom: -20px;
+  font-size: 1.25rem;
+  opacity: 0.5;
+  animation: floatUpSlow 4s ease-out forwards;
+}
+
+@keyframes floatUpSlow {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-100vh) scale(1.2);
+    opacity: 0;
+  }
 }
 
 /* iPhone / mobile browser friendly - keep basket above Safari UI */

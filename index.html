@@ -9,6 +9,7 @@
 <body>
   <!-- Start Screen -->
   <div id="start-screen">
+    <div id="start-hearts" aria-hidden="true"></div>
     <h1 class="game-title">Catch Haider's Love</h1>
     <p class="intro-message">This game was made specially for Zainab by Haider.</p>
     <button id="start-btn" class="btn">Start Game</button>
@@ -17,8 +18,14 @@
   <!-- Game Screen -->
   <div id="game-screen" class="hidden">
     <div id="score-display">Score: <span id="score">0</span></div>
-    <div id="lives-display">Hearts missed: <span id="lives">0</span> / 5</div>
+    <div id="lives-display">Hearts missed: <span id="lives">0</span> / 3</div>
+    <div id="level-badge" class="hidden"></div>
+    <div id="quote-overlay" class="hidden">
+      <p class="quote-text">For you a thousand times over</p>
+      <p class="quote-attribution">— The Kite Runner</p>
+    </div>
     <div id="floating-message" class="hidden"></div>
+    <div id="catch-burst" class="hidden"></div>
     <div id="game-area">
       <div id="basket"></div>
       <div id="hearts-container"></div>
@@ -27,6 +34,7 @@
 
   <!-- Game Over Screen -->
   <div id="game-over-screen" class="hidden">
+    <div id="gameover-hearts" aria-hidden="true"></div>
     <h2>Game Over</h2>
     <p class="final-score">Final Score: <span id="final-score">0</span></p>
     <p class="end-message">Zainab, you still win Haider's heart 💖</p>

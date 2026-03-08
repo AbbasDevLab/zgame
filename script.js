@@ -20,6 +20,7 @@ let lastInteractionTime = 0;
 let idleMessageShown = false;
 let loveBoostEndTime = 0;
 let lastTapTime = 0;
+let lastLoveBoostTime = 0;
 let heartRainEndTime = 0;
 let heartRainInterval = null;
 let haider150Shown = false;
@@ -36,7 +37,7 @@ let isMuted = false;
 const SECRET_SCORE = 600;
 const ZAINAB_HEART_CHANCE = 1 / 100;
 const ZAINAB_BONUS = 100;
-const HEART_RAIN_COMBO = 5;
+const HEART_RAIN_COMBO = 6;
 const HEART_RAIN_DURATION_MS = 3000;
 const HEART_RAIN_SPAWN_MS = 150;
 const HEART_RAIN_POINTS = 5;
@@ -59,8 +60,8 @@ const LEVELS = [
 // Teasers & late secrets
 const TEASER_SCORE = 1500;
 const SECRET_UNLOCK_SCORE = 4000;
-const HEART_RAIN_RANDOM_SCORE = 3000;
-const HEART_RAIN_RANDOM_COOLDOWN_MS = 40000;
+const HEART_RAIN_RANDOM_SCORE = 3200;
+const HEART_RAIN_RANDOM_COOLDOWN_MS = 70000;
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -163,7 +164,7 @@ const GOLDEN_HEART_CHANCE = 1 / 20;
 const COMBO_COUNT = 3;
 const COMBO_BONUS = 30;
 const IDLE_SEC = 6;
-const LOVE_BOOST_DURATION_MS = 10000;
+const LOVE_BOOST_DURATION_MS = 7000;
 const SECRET_ENDING_SCORE = 2200;
 const CELEBRATION_50_SCORE = 300;
 const MIN_SCORE_FOR_FLOATING_MSG = 28;
@@ -244,7 +245,7 @@ function checkScoreMilestones() {
   }
   if (score >= HEART_RAIN_RANDOM_SCORE && !isHeartRainActive()) {
     const now = Date.now();
-    if (now - lastRandomHeartRainTime > HEART_RAIN_RANDOM_COOLDOWN_MS && Math.random() < 0.05) {
+    if (now - lastRandomHeartRainTime > HEART_RAIN_RANDOM_COOLDOWN_MS && Math.random() < 0.02) {
       lastRandomHeartRainTime = now;
       startHeartRain();
     }
@@ -1072,13 +1073,16 @@ gameArea.addEventListener('touchstart', (e) => {
   if (!gameRunning) return;
   lastInteractionTime = Date.now();
   const now = Date.now();
-  if (now - lastTapTime < 350) {
+  if (now - lastTapTime < 300) {
     lastTapTime = 0;
-    loveBoostEndTime = Date.now() + LOVE_BOOST_DURATION_MS;
-    showFloatingMessage(LOVE_BOOST_MESSAGE);
-    if (loveBoostIndicator) {
-      loveBoostIndicator.classList.remove('hidden');
-      setTimeout(() => loveBoostIndicator.classList.add('hidden'), LOVE_BOOST_DURATION_MS);
+    if (now - lastLoveBoostTime > 20000) {
+      lastLoveBoostTime = now;
+      loveBoostEndTime = Date.now() + LOVE_BOOST_DURATION_MS;
+      showFloatingMessage(LOVE_BOOST_MESSAGE);
+      if (loveBoostIndicator) {
+        loveBoostIndicator.classList.remove('hidden');
+        setTimeout(() => loveBoostIndicator.classList.add('hidden'), LOVE_BOOST_DURATION_MS);
+      }
     }
   } else {
     lastTapTime = now;

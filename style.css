@@ -154,9 +154,16 @@ body {
 
 #score-display {
   left: 16px;
-  max-width: calc(50% - 24px);
-  line-height: 1.35;
-  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+#score-display .best-score {
+  display: block;
+  font-size: 0.88em;
+  font-weight: 500;
+  color: #b08090;
+  margin-top: 2px;
+  margin-left: 0;
 }
 
 .best-score {

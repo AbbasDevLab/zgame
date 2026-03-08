@@ -127,7 +127,7 @@ function setBestScore(n) {
 function updateBestScoreDisplay() {
   const best = getBestScore();
   if (best > 0) {
-    bestScoreEl.textContent = ' · Best: ' + best;
+    bestScoreEl.textContent = 'Best: ' + best;
     bestScoreEl.classList.remove('hidden');
   } else {
     bestScoreEl.textContent = '';

@@ -13,7 +13,7 @@ let bestScoreAtStartOfGame = 0;
 let newBestShownThisGame = false;
 
 // The Kite Runner quote — glitter heart every 250 score
-const KITE_RUNNER_QUOTE = "For you a thousand times over — The Kite Runner";
+const KITE_RUNNER_QUOTE = "For you a thousand times over";
 const QUOTE_SCORE_MILESTONE = 250;  // glitter heart (and quote when caught) at 250, 500, 750...
 
 // Heart emojis for variety

@@ -13,8 +13,15 @@ let bestScoreAtStartOfGame = 0;
 let newBestShownThisGame = false;
 let secretShownThisGame = false;
 let quoteSecretShownThisGame = false;
+let celebration50Shown = false;
+let secretEndingShown = false;
+let gameMode = 'basket';  // 'basket' | 'tap'
+let lastInteractionTime = 0;
+let idleMessageShown = false;
+let loveBoostEndTime = 0;
+let lastTapTime = 0;
 
-const SECRET_SCORE = 100;  // surprise message when she hits 100
+const SECRET_SCORE = 100;
 
 // The Kite Runner quote — glitter heart every 250 score
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
@@ -37,8 +44,16 @@ const CUTE_MESSAGES = [
   "You've got this! 💖",
   "So much love for you",
   "Best catch ever! 🎯",
-  "Good job Zainab! 💕"
+  "Good job Zainab! 💕",
+  "Nice catch!",
+  "Heart thief 😄",
+  "Zainab bonus +20!"
 ];
+
+const GOLDEN_MESSAGE = "Golden Heart! You unlocked Haider's love 💛";
+const IDLE_MESSAGE = "Hey Zainab… hearts are falling 😄";
+const LOVE_BOOST_MESSAGE = "Love Boost Activated 💖";
+const COMBO_MESSAGE = "Love Combo! +30 points";
 
 // Combo messages
 const COMBO_MESSAGES = [
@@ -55,8 +70,19 @@ const COMBO_MESSAGES = [
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
-const startBtn = document.getElementById('start-btn');
+const btnBasketMode = document.getElementById('btn-basket-mode');
+const btnTapMode = document.getElementById('btn-tap-mode');
 const restartBtn = document.getElementById('restart-btn');
+const secretMsgBtn = document.getElementById('secret-msg-btn');
+const secretMsgModal = document.getElementById('secret-msg-modal');
+const secretMsgClose = document.getElementById('secret-msg-close');
+const celebration50El = document.getElementById('celebration-50');
+const celebration50Btn = document.getElementById('celebration-50-btn');
+const secretEndingOverlay = document.getElementById('secret-ending-overlay');
+const secretEndingBtn = document.getElementById('secret-ending-btn');
+const loveBoostIndicator = document.getElementById('love-boost-indicator');
+const nightModeMsg = document.getElementById('night-mode-msg');
+const comboSparkleEl = document.getElementById('combo-sparkle');
 const scoreEl = document.getElementById('score');
 const livesEl = document.getElementById('lives');
 const gameArea = document.getElementById('game-area');
@@ -73,10 +99,19 @@ const bestScoreEl = document.getElementById('best-score');
 const livesDisplay = document.getElementById('lives-display');
 
 const BASKET_WIDTH = 12;
-const HEART_SPAWN_MIN = 10;   // % - so basket can reach (basket center goes 6% to 94%)
+const HEART_SPAWN_MIN = 10;
 const HEART_SPAWN_MAX = 90;
-const MAX_LIVES = 3;
+const MAX_LIVES = 5;
 const POINTS_PER_HEART = 10;
+const TAP_POINTS = 5;
+const GOLDEN_POINTS = 50;
+const GOLDEN_HEART_CHANCE = 1 / 20;
+const COMBO_COUNT = 3;
+const COMBO_BONUS = 30;
+const IDLE_SEC = 6;
+const LOVE_BOOST_DURATION_MS = 10000;
+const SECRET_ENDING_SCORE = 120;
+const CELEBRATION_50_SCORE = 50;
 const BASE_FALL_SPEED = 2;
 const MAX_FALL_SPEED = 5.5;
 const SPEED_UP_EVERY_POINTS = 25;
@@ -172,8 +207,14 @@ function spawnHeart() {
   if (!gameRunning) return;
   const heart = document.createElement('div');
   heart.className = 'heart';
-  heart.innerHTML = HEARTS[Math.floor(Math.random() * HEARTS.length)];
-  const isSpecial = Math.random() < 0.4;
+  const isGolden = Math.random() < GOLDEN_HEART_CHANCE;
+  if (isGolden) {
+    heart.classList.add('golden-heart');
+    heart.innerHTML = '💛';
+  } else {
+    heart.innerHTML = HEARTS[Math.floor(Math.random() * HEARTS.length)];
+  }
+  const isSpecial = !isGolden && Math.random() < 0.4;
   if (isSpecial) {
     heart.classList.add('special');
     heart.dataset.message = CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)];
@@ -187,7 +228,8 @@ function spawnHeart() {
     x: x,
     y: 0,
     speed: speed + Math.random() * 0.8,
-    message: heart.dataset.message || null
+    message: heart.dataset.message || null,
+    isGolden: isGolden
   });
 }
 
@@ -227,25 +269,37 @@ function checkCollision(heart) {
   return false;
 }
 
+function addScore(pts) {
+  const mult = (Date.now() < loveBoostEndTime) ? 2 : 1;
+  score += pts * mult;
+  scoreEl.textContent = score;
+}
+
 function removeHeart(heart, caught) {
   const idx = hearts.indexOf(heart);
   if (idx > -1) hearts.splice(idx, 1);
   if (caught) {
-    playCatchBurst(
-      (heart.element.getBoundingClientRect().left + heart.element.getBoundingClientRect().right) / 2,
-      heart.element.getBoundingClientRect().top + 15
-    );
+    const rect = heart.element.getBoundingClientRect();
+    playCatchBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
   heart.element.remove();
   if (!caught) {
     catchStreak = 0;
     lives++;
     livesEl.textContent = lives;
-    if (lives >= 2) livesDisplay.classList.add('warning');
-    if (lives >= MAX_LIVES) {
-      endGame();
-    }
+    if (lives >= MAX_LIVES - 1) livesDisplay.classList.add('warning');
+    if (lives >= MAX_LIVES) endGame();
   }
+}
+
+function showComboSparkle() {
+  if (!comboSparkleEl) return;
+  comboSparkleEl.innerHTML = '✨✨✨';
+  comboSparkleEl.classList.remove('hidden');
+  setTimeout(() => {
+    comboSparkleEl.classList.add('hidden');
+    comboSparkleEl.innerHTML = '';
+  }, 700);
 }
 
 function endGame() {
@@ -287,14 +341,87 @@ function showQuoteSecret() {
 
 function resumeAfterQuoteSecret() {
   if (quoteSecretOverlayEl) quoteSecretOverlayEl.classList.add('hidden');
+  resumeGame();
+}
+
+function pauseGame() {
+  gameRunning = false;
+  if (spawnInterval) clearInterval(spawnInterval);
+  cancelAnimationFrame(gameLoopId);
+}
+
+function showCelebration50() {
+  pauseGame();
+  if (celebration50El) {
+    const stars = celebration50El.querySelector('.celebration-stars');
+    if (stars) {
+      stars.innerHTML = '';
+      for (let i = 0; i < 12; i++) {
+        const s = document.createElement('span');
+        s.className = 'star-float';
+        s.textContent = '✨';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.animationDelay = Math.random() * 0.5 + 's';
+        stars.appendChild(s);
+      }
+    }
+    celebration50El.classList.remove('hidden');
+  }
+}
+
+function resumeAfterCelebration50() {
+  if (celebration50El) celebration50El.classList.add('hidden');
+  resumeGame();
+}
+
+function showSecretEnding() {
+  pauseGame();
+  if (secretEndingOverlay) secretEndingOverlay.classList.remove('hidden');
+}
+
+function resumeAfterSecretEnding() {
+  if (secretEndingOverlay) secretEndingOverlay.classList.add('hidden');
+  resumeGame();
+}
+
+function resumeGame() {
   gameRunning = true;
   spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
+function onHeartTapped(heartObj) {
+  lastInteractionTime = Date.now();
+  catchStreak++;
+  const pts = heartObj.isGolden ? GOLDEN_POINTS : TAP_POINTS;
+  addScore(pts);
+  if (catchStreak === COMBO_COUNT) {
+    addScore(COMBO_BONUS);
+    showFloatingMessage(COMBO_MESSAGE);
+    showComboSparkle();
+  } else if (heartObj.isGolden) {
+    showFloatingMessage(GOLDEN_MESSAGE);
+  } else if (heartObj.isGlitterHeart) {
+    showFloatingMessage(KITE_RUNNER_QUOTE);
+  } else if (Math.random() < 0.35) {
+    showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
+  }
+  hapticCatch();
+  if (score > getBestScore()) {
+    setBestScore(score);
+    updateBestScoreDisplay();
+  }
+  removeHeart(heartObj, true);
+}
+
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
+  if (score >= SECRET_ENDING_SCORE && !secretEndingShown) {
+    secretEndingShown = true;
+    showSecretEnding();
+    return;
+  }
   if (score >= SECRET_SCORE && !secretShownThisGame) {
     showSecretUnlocked();
     return;
@@ -303,25 +430,34 @@ function gameLoop() {
     showQuoteSecret();
     return;
   }
+  if (score >= CELEBRATION_50_SCORE && !celebration50Shown) {
+    celebration50Shown = true;
+    showCelebration50();
+    return;
+  }
   if (score >= nextGlitterAtScore) {
     nextGlitterAtScore += QUOTE_SCORE_MILESTONE;
     spawnGlitterHeart();
+  }
+  if (!idleMessageShown && Date.now() - lastInteractionTime > IDLE_SEC * 1000) {
+    idleMessageShown = true;
+    showFloatingMessage(IDLE_MESSAGE);
   }
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
     heart.y += heart.speed;
     heart.element.style.top = heart.y + 'px';
-    if (checkCollision(heart)) {
+    if (gameMode === 'basket' && checkCollision(heart)) {
       catchStreak++;
-      score += POINTS_PER_HEART;
-      scoreEl.textContent = score;
-      hapticCatch();
-      const prevBest = getBestScore();
-      if (score > prevBest) {
-        setBestScore(score);
-        updateBestScoreDisplay();
-      }
-      if (heart.isGlitterHeart) {
+      const pts = heart.isGolden ? GOLDEN_POINTS : POINTS_PER_HEART;
+      addScore(pts);
+      if (catchStreak === COMBO_COUNT) {
+        addScore(COMBO_BONUS);
+        showFloatingMessage(COMBO_MESSAGE);
+        showComboSparkle();
+      } else if (heart.isGolden) {
+        showFloatingMessage(GOLDEN_MESSAGE);
+      } else if (heart.isGlitterHeart) {
         showFloatingMessage(KITE_RUNNER_QUOTE);
       } else if (bestScoreAtStartOfGame > 0 && score > bestScoreAtStartOfGame && !newBestShownThisGame) {
         newBestShownThisGame = true;
@@ -331,7 +467,12 @@ function gameLoop() {
       } else {
         const comboMsg = COMBO_MESSAGES.find(([n]) => n === catchStreak);
         if (comboMsg) showFloatingMessage(comboMsg[1]);
-        else if (Math.random() < 0.25) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
+        else if (Math.random() < 0.3) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
+      }
+      hapticCatch();
+      if (score > getBestScore()) {
+        setBestScore(score);
+        updateBestScoreDisplay();
       }
       removeHeart(heart, true);
       continue;
@@ -343,28 +484,50 @@ function gameLoop() {
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-function startGame() {
+function startGame(mode) {
+  gameMode = mode || 'basket';
   score = 0;
   lives = 0;
   catchStreak = 0;
-  nextGlitterAtScore = QUOTE_SCORE_MILESTONE;  // first glitter at 250, then 500, 750...
+  nextGlitterAtScore = QUOTE_SCORE_MILESTONE;
   bestScoreAtStartOfGame = getBestScore();
   newBestShownThisGame = false;
   secretShownThisGame = false;
   quoteSecretShownThisGame = false;
+  celebration50Shown = false;
+  secretEndingShown = false;
+  idleMessageShown = false;
+  lastInteractionTime = Date.now();
+  loveBoostEndTime = 0;
   if (secretOverlayEl) secretOverlayEl.classList.add('hidden');
   if (quoteSecretOverlayEl) quoteSecretOverlayEl.classList.add('hidden');
+  if (celebration50El) celebration50El.classList.add('hidden');
+  if (secretEndingOverlay) secretEndingOverlay.classList.add('hidden');
+  if (loveBoostIndicator) loveBoostIndicator.classList.add('hidden');
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');
   gameRunning = true;
   basketX = 50;
   updateBasketPosition();
+  gameScreen.classList.toggle('tap-mode', gameMode === 'tap');
+  if (isNightMode()) {
+    document.body.classList.add('night-mode');
+    if (nightModeMsg) nightModeMsg.classList.remove('hidden');
+  } else {
+    document.body.classList.remove('night-mode');
+    if (nightModeMsg) nightModeMsg.classList.add('hidden');
+  }
   showScreen(gameScreen);
   updateBestScoreDisplay();
   spawnHeart();
   spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
+}
+
+function isNightMode() {
+  const hour = new Date().getHours();
+  return hour >= 20 || hour < 6;
 }
 
 // Start screen floating hearts
@@ -399,17 +562,6 @@ function fillGameOverHearts() {
 
 fillStartHearts();
 
-// Rotating tagline on start screen
-const taglineEl = document.getElementById('tagline');
-if (taglineEl) {
-  let taglineIdx = 0;
-  taglineEl.textContent = TAGLINES[0];
-  setInterval(() => {
-    taglineIdx = (taglineIdx + 1) % TAGLINES.length;
-    taglineEl.textContent = TAGLINES[taglineIdx];
-  }, 3500);
-}
-
 // Easter egg: tap title 5 times
 const titleEl = document.getElementById('game-title');
 const easterEggEl = document.getElementById('easter-egg-msg');
@@ -429,9 +581,9 @@ if (titleEl && easterEggEl) {
   });
 }
 
-// Controls
+// Controls (basket mode only)
 document.addEventListener('keydown', (e) => {
-  if (!gameRunning) return;
+  if (!gameRunning || gameMode !== 'basket') return;
   if (e.key === 'ArrowLeft') {
     basketX -= 8;
     e.preventDefault();
@@ -443,7 +595,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 gameArea.addEventListener('mousemove', (e) => {
-  if (!gameRunning) return;
+  if (!gameRunning || gameMode !== 'basket') return;
+  lastInteractionTime = Date.now();
   const rect = gameArea.getBoundingClientRect();
   const x = ((e.clientX - rect.left) / rect.width) * 100;
   basketX = x - BASKET_WIDTH / 2;
@@ -452,14 +605,60 @@ gameArea.addEventListener('mousemove', (e) => {
 
 gameArea.addEventListener('touchmove', (e) => {
   if (!gameRunning || !e.touches.length) return;
-  e.preventDefault();
-  const rect = gameArea.getBoundingClientRect();
-  const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
-  basketX = x - BASKET_WIDTH / 2;
-  updateBasketPosition();
+  if (gameMode === 'basket') {
+    e.preventDefault();
+    lastInteractionTime = Date.now();
+    const rect = gameArea.getBoundingClientRect();
+    const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+    basketX = x - BASKET_WIDTH / 2;
+    updateBasketPosition();
+  }
 }, { passive: false });
 
-startBtn.addEventListener('click', startGame);
-restartBtn.addEventListener('click', startGame);
+if (btnBasketMode) btnBasketMode.addEventListener('click', () => startGame('basket'));
+if (btnTapMode) btnTapMode.addEventListener('click', () => startGame('tap'));
+restartBtn.addEventListener('click', () => startGame(gameMode));
 if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSecret);
 if (quoteSecretContinueBtn) quoteSecretContinueBtn.addEventListener('click', resumeAfterQuoteSecret);
+if (celebration50Btn) celebration50Btn.addEventListener('click', resumeAfterCelebration50);
+if (secretEndingBtn) secretEndingBtn.addEventListener('click', resumeAfterSecretEnding);
+
+if (secretMsgBtn) secretMsgBtn.addEventListener('click', () => { if (secretMsgModal) secretMsgModal.classList.remove('hidden'); });
+if (secretMsgClose) secretMsgClose.addEventListener('click', () => { if (secretMsgModal) secretMsgModal.classList.add('hidden'); });
+
+if (heartsContainer) {
+  heartsContainer.addEventListener('click', (e) => {
+    if (gameMode !== 'tap' || !gameRunning) return;
+    const el = e.target.closest('.heart');
+    if (!el) return;
+    lastInteractionTime = Date.now();
+    const heartObj = hearts.find(h => h.element === el);
+    if (heartObj) onHeartTapped(heartObj);
+  });
+  heartsContainer.addEventListener('touchend', (e) => {
+    if (gameMode !== 'tap' || !gameRunning) return;
+    const el = e.target.closest('.heart');
+    if (!el) return;
+    e.preventDefault();
+    lastInteractionTime = Date.now();
+    const heartObj = hearts.find(h => h.element === el);
+    if (heartObj) onHeartTapped(heartObj);
+  }, { passive: false });
+}
+
+gameArea.addEventListener('touchstart', (e) => {
+  if (!gameRunning) return;
+  lastInteractionTime = Date.now();
+  const now = Date.now();
+  if (now - lastTapTime < 350) {
+    lastTapTime = 0;
+    loveBoostEndTime = Date.now() + LOVE_BOOST_DURATION_MS;
+    showFloatingMessage(LOVE_BOOST_MESSAGE);
+    if (loveBoostIndicator) {
+      loveBoostIndicator.classList.remove('hidden');
+      setTimeout(() => loveBoostIndicator.classList.add('hidden'), LOVE_BOOST_DURATION_MS);
+    }
+  } else {
+    lastTapTime = now;
+  }
+}, { passive: true });

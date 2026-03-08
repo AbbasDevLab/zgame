@@ -8,10 +8,11 @@ let spawnInterval;
 let gameLoopId;
 let floatingMessageTimeout;
 let catchStreak = 0;
+let glitterHeartSpawnedAt250 = false;
 
-// The Kite Runner quote — show like other messages when she catches a special heart
+// The Kite Runner quote — glitter heart at 250 score
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
-const QUOTE_HEART_CHANCE = 0.12;  // some special hearts show this quote
+const QUOTE_SCORE_MILESTONE = 250;  // at this score a glitter heart falls with the quote
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -127,8 +128,7 @@ function spawnHeart() {
   const isSpecial = Math.random() < 0.4;
   if (isSpecial) {
     heart.classList.add('special');
-    const isQuoteHeart = Math.random() < QUOTE_HEART_CHANCE;
-    heart.dataset.message = isQuoteHeart ? KITE_RUNNER_QUOTE : CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)];
+    heart.dataset.message = CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)];
   }
   const x = 5 + Math.random() * 90;
   heart.style.left = x + '%';
@@ -140,6 +140,25 @@ function spawnHeart() {
     y: 0,
     speed: speed + Math.random() * 0.8,
     message: heart.dataset.message || null
+  });
+}
+
+function spawnGlitterHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart special glitter-heart';
+  heart.innerHTML = '✨💖✨';
+  heart.dataset.message = KITE_RUNNER_QUOTE;
+  const x = 15 + Math.random() * 70;
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.5,
+    message: KITE_RUNNER_QUOTE
   });
 }
 
@@ -194,6 +213,10 @@ function endGame() {
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
+  if (score >= QUOTE_SCORE_MILESTONE && !glitterHeartSpawnedAt250) {
+    glitterHeartSpawnedAt250 = true;
+    spawnGlitterHeart();
+  }
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
     heart.y += heart.speed;
@@ -224,6 +247,7 @@ function startGame() {
   score = 0;
   lives = 0;
   catchStreak = 0;
+  glitterHeartSpawnedAt250 = false;
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');

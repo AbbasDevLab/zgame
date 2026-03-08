@@ -224,6 +224,18 @@ body {
   animation: wiggle 0.6s ease-in-out infinite;
 }
 
+/* Glitter heart – carries "For you a thousand times over" at 250 score */
+.heart.glitter-heart {
+  font-size: 36px;
+  animation: wiggle 0.6s ease-in-out infinite, glitterPulse 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 16px rgba(255, 105, 180, 0.7));
+}
+
+@keyframes glitterPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
 @keyframes wiggle {
   0%, 100% { transform: rotate(-5deg); }
   50% { transform: rotate(5deg); }
@@ -347,6 +359,10 @@ body {
 
   .heart.special {
     font-size: 26px;
+  }
+
+  .heart.glitter-heart {
+    font-size: 30px;
   }
 }
 

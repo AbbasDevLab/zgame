@@ -8,13 +8,13 @@ let spawnInterval;
 let gameLoopId;
 let floatingMessageTimeout;
 let catchStreak = 0;
-let glitterHeartSpawnedAt250 = false;
+let nextGlitterAtScore = QUOTE_SCORE_MILESTONE;  // spawn glitter heart at 250, then 500, 750...
 let bestScoreAtStartOfGame = 0;
 let newBestShownThisGame = false;
 
-// The Kite Runner quote — glitter heart at 250 score
-const KITE_RUNNER_QUOTE = "For you a thousand times over";
-const QUOTE_SCORE_MILESTONE = 250;  // at this score a glitter heart falls with the quote
+// The Kite Runner quote — glitter heart every 250 score
+const KITE_RUNNER_QUOTE = "For you a thousand times over — The Kite Runner";
+const QUOTE_SCORE_MILESTONE = 250;  // glitter heart (and quote when caught) at 250, 500, 750...
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -254,8 +254,8 @@ function endGame() {
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
-  if (score >= QUOTE_SCORE_MILESTONE && !glitterHeartSpawnedAt250) {
-    glitterHeartSpawnedAt250 = true;
+  if (score >= nextGlitterAtScore) {
+    nextGlitterAtScore += QUOTE_SCORE_MILESTONE;
     spawnGlitterHeart();
   }
   for (let i = hearts.length - 1; i >= 0; i--) {
@@ -298,7 +298,7 @@ function startGame() {
   score = 0;
   lives = 0;
   catchStreak = 0;
-  glitterHeartSpawnedAt250 = false;
+  nextGlitterAtScore = QUOTE_SCORE_MILESTONE;
   bestScoreAtStartOfGame = getBestScore();
   newBestShownThisGame = false;
   scoreEl.textContent = '0';

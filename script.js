@@ -20,8 +20,18 @@ let lastInteractionTime = 0;
 let idleMessageShown = false;
 let loveBoostEndTime = 0;
 let lastTapTime = 0;
+let heartRainEndTime = 0;
+let heartRainInterval = null;
+let haider150Shown = false;
 
 const SECRET_SCORE = 100;
+const ZAINAB_HEART_CHANCE = 1 / 100;
+const ZAINAB_BONUS = 100;
+const HEART_RAIN_COMBO = 5;
+const HEART_RAIN_DURATION_MS = 3000;
+const HEART_RAIN_SPAWN_MS = 150;
+const HEART_RAIN_POINTS = 5;
+const HAIDER_150_SCORE = 150;
 
 // The Kite Runner quote — glitter heart every 250 score
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
@@ -83,6 +93,13 @@ const secretEndingBtn = document.getElementById('secret-ending-btn');
 const loveBoostIndicator = document.getElementById('love-boost-indicator');
 const nightModeMsg = document.getElementById('night-mode-msg');
 const comboSparkleEl = document.getElementById('combo-sparkle');
+const zainabHeartOverlay = document.getElementById('zainab-heart-overlay');
+const zainabHeartContinueBtn = document.getElementById('zainab-heart-continue-btn');
+const haider150Overlay = document.getElementById('haider-150-overlay');
+const haider150ContinueBtn = document.getElementById('haider-150-continue-btn');
+const gameAreaEl = document.getElementById('game-area');
+const heartRainSparkles = document.getElementById('heart-rain-sparkles');
+const cursorHeartEl = document.getElementById('cursor-heart');
 const scoreEl = document.getElementById('score');
 const livesEl = document.getElementById('lives');
 const gameArea = document.getElementById('game-area');
@@ -102,7 +119,7 @@ const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 10;
 const HEART_SPAWN_MAX = 90;
 const MAX_LIVES = 3;
-const POINTS_PER_HEART = 10;
+const POINTS_PER_HEART = 5;
 const TAP_POINTS = 5;
 const GOLDEN_POINTS = 50;
 const GOLDEN_HEART_CHANCE = 1 / 20;
@@ -205,8 +222,17 @@ function updateBasketPosition() {
   basket.style.left = basketX + '%';
 }
 
+function isHeartRainActive() {
+  return Date.now() < heartRainEndTime;
+}
+
 function spawnHeart() {
   if (!gameRunning) return;
+  const isZainab = !isHeartRainActive() && Math.random() < ZAINAB_HEART_CHANCE;
+  if (isZainab) {
+    spawnZainabHeart();
+    return;
+  }
   const heart = document.createElement('div');
   heart.className = 'heart';
   const isGolden = Math.random() < GOLDEN_HEART_CHANCE;
@@ -233,6 +259,102 @@ function spawnHeart() {
     message: heart.dataset.message || null,
     isGolden: isGolden
   });
+}
+
+function spawnZainabHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart zainab-heart';
+  heart.textContent = 'Z';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.35,
+    message: null,
+    isGolden: false,
+    isZainabHeart: true
+  });
+}
+
+function spawnRainHeart() {
+  if (!gameRunning || !isHeartRainActive()) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart rain-heart';
+  heart.innerHTML = HEARTS[Math.floor(Math.random() * HEARTS.length)];
+  const x = Math.random() * 100;
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: 4.5 + Math.random() * 1.5,
+    message: null,
+    isGolden: false,
+    isRainHeart: true
+  });
+}
+
+function startHeartRain() {
+  catchStreak = 0;
+  heartRainEndTime = Date.now() + HEART_RAIN_DURATION_MS;
+  showFloatingMessage('💞 Heart Rain!');
+  if (gameAreaEl) gameAreaEl.classList.add('heart-rain');
+  if (heartRainSparkles) {
+    heartRainSparkles.innerHTML = '';
+    for (let i = 0; i < 15; i++) {
+      const s = document.createElement('span');
+      s.className = 'rain-sparkle';
+      s.textContent = '✨';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.animationDelay = Math.random() * 0.5 + 's';
+      heartRainSparkles.appendChild(s);
+    }
+    heartRainSparkles.classList.remove('hidden');
+  }
+  clearInterval(spawnInterval);
+  heartRainInterval = setInterval(() => {
+    if (!isHeartRainActive()) {
+      clearInterval(heartRainInterval);
+      heartRainInterval = null;
+      if (gameAreaEl) gameAreaEl.classList.remove('heart-rain');
+      if (heartRainSparkles) heartRainSparkles.classList.add('hidden');
+      spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
+      return;
+    }
+    spawnRainHeart();
+  }, HEART_RAIN_SPAWN_MS);
+}
+
+function showZainabHeartFound() {
+  pauseGame();
+  addScore(ZAINAB_BONUS);
+  if (score > getBestScore()) {
+    setBestScore(score);
+    updateBestScoreDisplay();
+  }
+  showComboSparkle();
+  if (zainabHeartOverlay) zainabHeartOverlay.classList.remove('hidden');
+}
+
+function resumeAfterZainabHeart() {
+  if (zainabHeartOverlay) zainabHeartOverlay.classList.add('hidden');
+  resumeGame();
+}
+
+function showHaider150Message() {
+  pauseGame();
+  if (haider150Overlay) haider150Overlay.classList.remove('hidden');
+}
+
+function resumeAfterHaider150() {
+  if (haider150Overlay) haider150Overlay.classList.add('hidden');
+  resumeGame();
 }
 
 function spawnGlitterHeart() {
@@ -286,6 +408,7 @@ function removeHeart(heart, caught) {
   }
   heart.element.remove();
   if (!caught) {
+    if (heart.isRainHeart) return;
     catchStreak = 0;
     lives++;
     livesEl.textContent = lives;
@@ -388,13 +511,31 @@ function resumeAfterSecretEnding() {
 
 function resumeGame() {
   gameRunning = true;
-  spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
+  if (!isHeartRainActive()) {
+    spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
+  }
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 function onHeartTapped(heartObj) {
   lastInteractionTime = Date.now();
+  if (heartObj.isZainabHeart) {
+    showZainabHeartFound();
+    removeHeart(heartObj, true);
+    return;
+  }
+  if (heartObj.isRainHeart) {
+    addScore(HEART_RAIN_POINTS);
+    removeHeart(heartObj, true);
+    return;
+  }
   catchStreak++;
+  if (catchStreak === HEART_RAIN_COMBO) {
+    addScore(heartObj.isGolden ? GOLDEN_POINTS : TAP_POINTS);
+    startHeartRain();
+    removeHeart(heartObj, true);
+    return;
+  }
   const pts = heartObj.isGolden ? GOLDEN_POINTS : TAP_POINTS;
   addScore(pts);
   if (catchStreak === COMBO_COUNT) {
@@ -434,6 +575,11 @@ function gameLoop() {
     showQuoteSecret();
     return;
   }
+  if (score >= HAIDER_150_SCORE && !haider150Shown) {
+    haider150Shown = true;
+    showHaider150Message();
+    return;
+  }
   if (score >= CELEBRATION_50_SCORE && !celebration50Shown) {
     celebration50Shown = true;
     showCelebration50();
@@ -453,6 +599,22 @@ function gameLoop() {
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCollision(heart)) {
       catchStreak++;
+      if (heart.isZainabHeart) {
+        showZainabHeartFound();
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isRainHeart) {
+        addScore(HEART_RAIN_POINTS);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (catchStreak === HEART_RAIN_COMBO) {
+        addScore(heart.isGolden ? GOLDEN_POINTS : POINTS_PER_HEART);
+        startHeartRain();
+        removeHeart(heart, true);
+        continue;
+      }
       const pts = heart.isGolden ? GOLDEN_POINTS : POINTS_PER_HEART;
       addScore(pts);
       const showMsg = score >= MIN_SCORE_FOR_FLOATING_MSG;
@@ -486,7 +648,8 @@ function gameLoop() {
       continue;
     }
     if (heart.y > rect.height) {
-      removeHeart(heart, false);
+      if (!heart.isRainHeart) removeHeart(heart, false);
+      else removeHeart(heart, false);
     }
   }
   gameLoopId = requestAnimationFrame(gameLoop);
@@ -504,14 +667,22 @@ function startGame(mode) {
   quoteSecretShownThisGame = false;
   celebration50Shown = false;
   secretEndingShown = false;
+  haider150Shown = false;
   idleMessageShown = false;
   lastInteractionTime = Date.now();
   loveBoostEndTime = 0;
+  heartRainEndTime = 0;
+  if (heartRainInterval) clearInterval(heartRainInterval);
+  heartRainInterval = null;
   if (secretOverlayEl) secretOverlayEl.classList.add('hidden');
   if (quoteSecretOverlayEl) quoteSecretOverlayEl.classList.add('hidden');
   if (celebration50El) celebration50El.classList.add('hidden');
   if (secretEndingOverlay) secretEndingOverlay.classList.add('hidden');
+  if (zainabHeartOverlay) zainabHeartOverlay.classList.add('hidden');
+  if (haider150Overlay) haider150Overlay.classList.add('hidden');
   if (loveBoostIndicator) loveBoostIndicator.classList.add('hidden');
+  if (gameAreaEl) gameAreaEl.classList.remove('heart-rain');
+  if (heartRainSparkles) heartRainSparkles.classList.add('hidden');
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');
@@ -623,6 +794,16 @@ gameArea.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
+function updateCursorHeart(x, y) {
+  if (!cursorHeartEl || !startScreen || startScreen.classList.contains('hidden')) return;
+  cursorHeartEl.style.left = x + 'px';
+  cursorHeartEl.style.top = y + 'px';
+}
+document.addEventListener('mousemove', (e) => updateCursorHeart(e.clientX, e.clientY));
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length) updateCursorHeart(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
 if (btnBasketMode) btnBasketMode.addEventListener('click', () => startGame('basket'));
 if (btnTapMode) btnTapMode.addEventListener('click', () => startGame('tap'));
 restartBtn.addEventListener('click', () => startGame(gameMode));
@@ -630,6 +811,8 @@ if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSe
 if (quoteSecretContinueBtn) quoteSecretContinueBtn.addEventListener('click', resumeAfterQuoteSecret);
 if (celebration50Btn) celebration50Btn.addEventListener('click', resumeAfterCelebration50);
 if (secretEndingBtn) secretEndingBtn.addEventListener('click', resumeAfterSecretEnding);
+if (zainabHeartContinueBtn) zainabHeartContinueBtn.addEventListener('click', resumeAfterZainabHeart);
+if (haider150ContinueBtn) haider150ContinueBtn.addEventListener('click', resumeAfterHaider150);
 
 if (secretMsgBtn) secretMsgBtn.addEventListener('click', () => { if (secretMsgModal) secretMsgModal.classList.remove('hidden'); });
 if (secretMsgClose) secretMsgClose.addEventListener('click', () => { if (secretMsgModal) secretMsgModal.classList.add('hidden'); });

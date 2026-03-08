@@ -9,6 +9,7 @@
 <body>
   <!-- Start Screen -->
   <div id="start-screen">
+    <div id="cursor-heart" class="cursor-heart" aria-hidden="true">❤️</div>
     <div id="start-hearts" aria-hidden="true"></div>
     <h1 class="game-title" id="game-title">Catch Haider's Love</h1>
     <p class="intro-message">This game was made specially for Zainab by Haider ❤️</p>
@@ -55,6 +56,27 @@
       <button id="celebration-50-btn" class="btn secret-btn">Continue</button>
     </div>
 
+    <!-- Secret Zainab Heart (rare Z heart) -->
+    <div id="zainab-heart-overlay" class="secret-overlay zainab-overlay hidden">
+      <div class="secret-card zainab-card">
+        <p class="zainab-title">💖 Secret Zainab Heart Found!</p>
+        <p class="zainab-line1">You discovered the rarest heart.</p>
+        <p class="zainab-line2">Because Zainab is one of a kind.</p>
+        <button id="zainab-heart-continue-btn" class="btn secret-btn">Continue</button>
+      </div>
+    </div>
+
+    <!-- Message from Haider at 150 -->
+    <div id="haider-150-overlay" class="secret-overlay haider-150-overlay hidden">
+      <div class="secret-card haider-150-card">
+        <p class="secret-badge">💌 Message from Haider</p>
+        <p class="haider-150-line1">I didn't just make this game for fun.</p>
+        <p class="haider-150-line2">I made it because seeing you excited about it made me happy.</p>
+        <p class="haider-150-line3">Thanks for playing, Zainab ❤️</p>
+        <button id="haider-150-continue-btn" class="btn secret-btn">Continue Playing</button>
+      </div>
+    </div>
+
     <!-- Secret ending 120+ -->
     <div id="secret-ending-overlay" class="secret-overlay hidden">
       <div class="secret-card secret-ending-card">
@@ -70,6 +92,7 @@
     <div id="catch-burst" class="hidden"></div>
     <div id="combo-sparkle" class="combo-sparkle hidden"></div>
     <div id="game-area">
+      <div id="heart-rain-sparkles" class="heart-rain-sparkles hidden" aria-hidden="true"></div>
       <div id="basket"></div>
       <div id="hearts-container"></div>
     </div>

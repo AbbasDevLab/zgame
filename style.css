@@ -93,6 +93,19 @@ body.night-mode #game-area {
   min-width: 200px;
 }
 
+/* Cursor heart (Easter egg: follows mouse/finger on start screen) */
+.cursor-heart {
+  position: fixed;
+  left: 0;
+  top: 0;
+  font-size: 1.4rem;
+  pointer-events: none;
+  z-index: 999;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 2px 6px rgba(199, 21, 133, 0.4));
+  transition: left 0.05s linear, top 0.05s linear;
+}
+
 #game-title {
   cursor: pointer;
 }
@@ -248,6 +261,65 @@ body.night-mode #game-area {
   margin-top: 20px;
 }
 
+/* Secret Zainab Heart overlay — glowing card */
+.zainab-overlay {
+  background: rgba(255, 228, 235, 0.98);
+}
+.zainab-card {
+  box-shadow: 0 0 40px rgba(255, 105, 180, 0.5), 0 12px 40px rgba(199, 21, 133, 0.3);
+  border-color: rgba(255, 105, 180, 0.8);
+  animation: zainabGlow 1.2s ease-in-out infinite alternate;
+}
+.zainab-title {
+  font-size: clamp(1.2rem, 3vw, 1.5rem);
+  font-weight: 700;
+  color: #c71585;
+  margin-bottom: 12px;
+  text-shadow: 0 0 20px rgba(255, 105, 180, 0.6);
+}
+.zainab-line1, .zainab-line2 {
+  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  color: #8b4789;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.zainab-line2 {
+  font-weight: 600;
+  color: #c71585;
+}
+@keyframes zainabGlow {
+  from { box-shadow: 0 0 30px rgba(255, 105, 180, 0.4), 0 12px 40px rgba(199, 21, 133, 0.2); }
+  to   { box-shadow: 0 0 50px rgba(255, 105, 180, 0.6), 0 12px 40px rgba(199, 21, 133, 0.3); }
+}
+
+/* Message from Haider at 150 — soft fade */
+.haider-150-overlay {
+  background: rgba(255, 228, 235, 0.92);
+  animation: haiderFadeIn 0.6s ease-out;
+}
+.haider-150-card {
+  animation: haiderCardIn 0.6s ease-out 0.15s both;
+}
+.haider-150-line1, .haider-150-line2, .haider-150-line3 {
+  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  color: #8b4789;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.haider-150-line3 {
+  font-weight: 600;
+  color: #c71585;
+  margin-top: 8px;
+}
+@keyframes haiderFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes haiderCardIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* Catch burst effect */
 #catch-burst {
   position: fixed;
@@ -299,6 +371,31 @@ body.night-mode #game-area {
   touch-action: none;
 }
 
+#game-area.heart-rain {
+  background: linear-gradient(180deg, rgba(255, 182, 193, 0.15) 0%, rgba(255, 228, 225, 0.35) 100%);
+}
+
+#heart-rain-sparkles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+#heart-rain-sparkles.hidden {
+  display: none !important;
+}
+.rain-sparkle {
+  position: absolute;
+  top: 0;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  animation: rainSparkle 1.5s ease-in-out infinite;
+}
+@keyframes rainSparkle {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.2); }
+}
+
 #game-screen.tap-mode #basket {
   display: none;
 }
@@ -345,6 +442,23 @@ body.night-mode #game-area {
 #game-screen.tap-mode .heart {
   pointer-events: auto;
   cursor: pointer;
+}
+
+.heart.zainab-heart {
+  font-size: 32px;
+  font-weight: 700;
+  color: #c71585;
+  text-shadow: 0 0 12px rgba(255, 105, 180, 0.8);
+  animation: zainabHeartPulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes zainabHeartPulse {
+  from { transform: scale(1); filter: drop-shadow(0 2px 4px rgba(199, 21, 133, 0.3)); }
+  to   { transform: scale(1.08); filter: drop-shadow(0 0 12px rgba(255, 105, 180, 0.6)); }
+}
+
+.heart.rain-heart {
+  font-size: 20px;
+  animation: none;
 }
 
 .heart.golden-heart {

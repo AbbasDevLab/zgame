@@ -198,7 +198,8 @@ function spawnGlitterHeart() {
     x: x,
     y: 0,
     speed: speed + Math.random() * 0.5,
-    message: KITE_RUNNER_QUOTE
+    message: KITE_RUNNER_QUOTE,
+    isGlitterHeart: true
   });
 }
 
@@ -272,8 +273,8 @@ function gameLoop() {
         setBestScore(score);
         updateBestScoreDisplay();
       }
-      if (heart.message === KITE_RUNNER_QUOTE) {
-        showFloatingMessage(heart.message);
+      if (heart.isGlitterHeart) {
+        showFloatingMessage(KITE_RUNNER_QUOTE);
       } else if (score > bestScoreAtStartOfGame && !newBestShownThisGame) {
         newBestShownThisGame = true;
         showFloatingMessage('New best! 🎉');

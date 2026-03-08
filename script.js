@@ -24,6 +24,14 @@ let heartRainEndTime = 0;
 let heartRainInterval = null;
 let haider150Shown = false;
 let lastAchievementTime = 0;
+let achievementQueue = [];
+let achievementShowing = false;
+let currentLevelIndex = 0;
+let teaser1500Shown = false;
+let secret4000Shown = false;
+let lastRandomHeartRainTime = 0;
+let audioInitialized = false;
+let isMuted = false;
 
 const SECRET_SCORE = 600;
 const ZAINAB_HEART_CHANCE = 1 / 100;
@@ -38,6 +46,21 @@ const HAIDER_150_SCORE = 1200;
 const KITE_RUNNER_QUOTE = "For you a thousand times over";
 const QUOTE_SCORE_MILESTONE = 250;  // glitter heart at 250, 500, 750...
 const QUOTE_OVERLAY_SCORE = 1800;
+
+// Level system
+const LEVELS = [
+  { min: 0, max: 300, label: 'Level 1 — Warm Up' },
+  { min: 300, max: 600, label: 'Level 2 — Heart Catcher' },
+  { min: 600, max: 1200, label: 'Level 3 — Love Collector' },
+  { min: 1200, max: 1800, label: 'Level 4 — Zainab Mode' },
+  { min: 1800, max: 2200, label: 'Level 5 — Heart Queen' }
+];
+
+// Teasers & late secrets
+const TEASER_SCORE = 1500;
+const SECRET_UNLOCK_SCORE = 4000;
+const HEART_RAIN_RANDOM_SCORE = 3000;
+const HEART_RAIN_RANDOM_COOLDOWN_MS = 40000;
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -118,6 +141,16 @@ const quoteSecretContinueBtn = document.getElementById('quote-secret-continue-bt
 const finalScoreEl = document.getElementById('final-score');
 const bestScoreEl = document.getElementById('best-score');
 const livesDisplay = document.getElementById('lives-display');
+const levelLabelEl = document.getElementById('level-label');
+const levelProgressFill = document.getElementById('level-progress-fill');
+const levelPopupEl = document.getElementById('level-popup');
+const audioToggleBtn = document.getElementById('audio-toggle');
+const sfxCatchEl = document.getElementById('sfx-catch');
+const sfxTapEl = document.getElementById('sfx-tap');
+const sfxGoldenEl = document.getElementById('sfx-golden');
+const sfxComboEl = document.getElementById('sfx-combo');
+const sfxHeartRainEl = document.getElementById('sfx-heart-rain');
+const bgMusicEl = document.getElementById('bg-music');
 
 const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 10;
@@ -149,6 +182,75 @@ const TAGLINES = [
 const EASTER_EGG_MESSAGE = "You found it! Made with so much love for you, Zainab. — Haider 💕";
 const EASTER_EGG_TAPS = 5;
 
+function getLevelIndexForScore(s) {
+  if (s < LEVELS[1].min) return 0;
+  if (s < LEVELS[2].min) return 1;
+  if (s < LEVELS[3].min) return 2;
+  if (s < LEVELS[4].min) return 3;
+  return 4;
+}
+
+function updateLevelAndProgress() {
+  if (!levelLabelEl || !levelProgressFill) return;
+  const prevIndex = currentLevelIndex;
+  const newIndex = getLevelIndexForScore(score);
+  currentLevelIndex = newIndex;
+  const lvl = LEVELS[newIndex];
+  levelLabelEl.textContent = lvl.label;
+  const min = lvl.min;
+  const max = lvl.max;
+  let progress = 1;
+  if (newIndex < LEVELS.length - 1) {
+    progress = Math.max(0, Math.min(1, (score - min) / (max - min)));
+  }
+  levelProgressFill.style.width = (progress * 100) + '%';
+  if (newIndex > prevIndex) {
+    // Queue all levels crossed
+    for (let i = prevIndex + 1; i <= newIndex; i++) {
+      const levelNumber = i + 1; // level 2..5
+      enqueueAchievement('level-' + levelNumber);
+    }
+  }
+}
+
+function checkScoreMilestones() {
+  if (!celebration50Shown && score >= CELEBRATION_50_SCORE) {
+    celebration50Shown = true;
+    enqueueAchievement('celebration');
+  }
+  if (!secretShownThisGame && score >= SECRET_SCORE) {
+    secretShownThisGame = true;
+    enqueueAchievement('secret-main');
+  }
+  if (!haider150Shown && score >= HAIDER_150_SCORE) {
+    haider150Shown = true;
+    enqueueAchievement('message-haider');
+  }
+  if (!secretEndingShown && score >= SECRET_ENDING_SCORE) {
+    secretEndingShown = true;
+    enqueueAchievement('heart-queen');
+  }
+  if (!quoteSecretShownThisGame && score >= QUOTE_OVERLAY_SCORE) {
+    quoteSecretShownThisGame = true;
+    enqueueAchievement('kite-runner');
+  }
+  if (!teaser1500Shown && score >= TEASER_SCORE) {
+    teaser1500Shown = true;
+    enqueueAchievement('teaser-1500');
+  }
+  if (!secret4000Shown && score >= SECRET_UNLOCK_SCORE) {
+    secret4000Shown = true;
+    enqueueAchievement('secret-4000');
+  }
+  if (score >= HEART_RAIN_RANDOM_SCORE && !isHeartRainActive()) {
+    const now = Date.now();
+    if (now - lastRandomHeartRainTime > HEART_RAIN_RANDOM_COOLDOWN_MS && Math.random() < 0.05) {
+      lastRandomHeartRainTime = now;
+      startHeartRain();
+    }
+  }
+}
+
 function showScreen(screen) {
   startScreen.classList.add('hidden');
   gameScreen.classList.add('hidden');
@@ -178,6 +280,39 @@ function showFloatingMessage(text) {
 
 function hapticCatch() {
   if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(12);
+}
+
+function ensureAudioInitialized() {
+  if (audioInitialized) return;
+  audioInitialized = true;
+  if (bgMusicEl && !isMuted) {
+    try {
+      bgMusicEl.volume = 0.35;
+      bgMusicEl.play().catch(() => {});
+    } catch (_) {}
+  }
+}
+
+function playSfx(el) {
+  if (!el || isMuted) return;
+  try {
+    el.currentTime = 0;
+    el.play();
+  } catch (_) {}
+}
+
+function toggleAudio() {
+  isMuted = !isMuted;
+  if (audioToggleBtn) {
+    audioToggleBtn.classList.toggle('muted', isMuted);
+    audioToggleBtn.textContent = isMuted ? '🔇' : '🔊';
+  }
+  [sfxCatchEl, sfxTapEl, sfxGoldenEl, sfxComboEl, sfxHeartRainEl, bgMusicEl].forEach(a => {
+    if (a) a.muted = isMuted;
+  });
+  if (bgMusicEl && !isMuted && audioInitialized) {
+    try { bgMusicEl.play().catch(() => {}); } catch (_) {}
+  }
 }
 
 function getBestScore() {
@@ -359,6 +494,7 @@ function showHaider150Message() {
 
 function resumeAfterHaider150() {
   if (haider150Overlay) haider150Overlay.classList.add('hidden');
+  achievementShowing = false;
   resumeGame();
 }
 
@@ -402,6 +538,8 @@ function addScore(pts) {
   const mult = (Date.now() < loveBoostEndTime) ? 2 : 1;
   score += pts * mult;
   scoreEl.textContent = score;
+  updateLevelAndProgress();
+  checkScoreMilestones();
 }
 
 function removeHeart(heart, caught) {
@@ -440,6 +578,73 @@ function canShowAchievement() {
   return Date.now() - lastAchievementTime > ACHIEVEMENT_COOLDOWN_MS;
 }
 
+function enqueueAchievement(id) {
+  if (!achievementQueue.includes(id)) {
+    achievementQueue.push(id);
+  }
+}
+
+function showLevelPopup(message) {
+  if (!levelPopupEl) {
+    achievementShowing = false;
+    return;
+  }
+  levelPopupEl.textContent = message;
+  levelPopupEl.classList.remove('hidden');
+  levelPopupEl.classList.add('show');
+  markAchievementShown();
+  setTimeout(() => {
+    levelPopupEl.classList.remove('show');
+    levelPopupEl.classList.add('hidden');
+    achievementShowing = false;
+  }, 2300);
+}
+
+function processAchievementQueue() {
+  if (achievementShowing) return;
+  if (!canShowAchievement()) return;
+  if (!achievementQueue.length) return;
+  const id = achievementQueue.shift();
+  achievementShowing = true;
+  switch (id) {
+    case 'celebration':
+      showCelebration50();
+      break;
+    case 'secret-main':
+      showSecretUnlocked();
+      break;
+    case 'message-haider':
+      showHaider150Message();
+      break;
+    case 'heart-queen':
+      showSecretEnding();
+      break;
+    case 'kite-runner':
+      showQuoteSecret();
+      break;
+    case 'level-2':
+      showLevelPopup('✨ Level Up! Heart Catcher');
+      break;
+    case 'level-3':
+      showLevelPopup('💖 Level Up! Love Collector');
+      break;
+    case 'level-4':
+      showLevelPopup('🌸 Zainab Mode Activated!');
+      break;
+    case 'level-5':
+      showLevelPopup('👑 Heart Queen Level');
+      break;
+    case 'teaser-1500':
+      showLevelPopup('🔒 Something special is coming…');
+      break;
+    case 'secret-4000':
+      showLevelPopup('💌 Secret Message from Haider Unlocked');
+      break;
+    default:
+      achievementShowing = false;
+  }
+}
+
 function endGame() {
   gameRunning = false;
   clearInterval(spawnInterval);
@@ -461,6 +666,7 @@ function pauseGameForOverlay() {
 
 function resumeAfterSecret() {
   secretOverlayEl.classList.add('hidden');
+  achievementShowing = false;
   gameRunning = true;
   spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
   gameLoopId = requestAnimationFrame(gameLoop);
@@ -481,6 +687,7 @@ function showQuoteSecret() {
 
 function resumeAfterQuoteSecret() {
   if (quoteSecretOverlayEl) quoteSecretOverlayEl.classList.add('hidden');
+  achievementShowing = false;
   resumeGame();
 }
 
@@ -512,6 +719,7 @@ function showCelebration50() {
 
 function resumeAfterCelebration50() {
   if (celebration50El) celebration50El.classList.add('hidden');
+  achievementShowing = false;
   resumeGame();
 }
 
@@ -523,6 +731,7 @@ function showSecretEnding() {
 
 function resumeAfterSecretEnding() {
   if (secretEndingOverlay) secretEndingOverlay.classList.add('hidden');
+  achievementShowing = false;
   resumeGame();
 }
 
@@ -543,6 +752,7 @@ function onHeartTapped(heartObj) {
   }
   if (heartObj.isRainHeart) {
     addScore(HEART_RAIN_POINTS);
+    playSfx(sfxHeartRainEl);
     removeHeart(heartObj, true);
     return;
   }
@@ -550,6 +760,7 @@ function onHeartTapped(heartObj) {
   if (catchStreak === HEART_RAIN_COMBO) {
     addScore(heartObj.isGolden ? GOLDEN_POINTS : TAP_POINTS);
     startHeartRain();
+    playSfx(sfxHeartRainEl);
     removeHeart(heartObj, true);
     return;
   }
@@ -557,18 +768,21 @@ function onHeartTapped(heartObj) {
   addScore(pts);
   if (catchStreak === COMBO_COUNT) {
     addScore(COMBO_BONUS);
+    playSfx(sfxComboEl);
     if (score >= MIN_SCORE_FOR_COMBO_MSG) {
       showFloatingMessage(COMBO_MESSAGE);
       showComboSparkle();
     }
   } else if (heartObj.isGolden) {
     showFloatingMessage(GOLDEN_MESSAGE);
+    playSfx(sfxGoldenEl);
   } else if (heartObj.isGlitterHeart) {
     showFloatingMessage(KITE_RUNNER_QUOTE);
   } else if (score >= MIN_SCORE_FOR_FLOATING_MSG && Math.random() < 0.22) {
     showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
   }
   hapticCatch();
+  playSfx(sfxTapEl);
   if (score > getBestScore()) {
     setBestScore(score);
     updateBestScoreDisplay();
@@ -579,31 +793,7 @@ function onHeartTapped(heartObj) {
 function gameLoop() {
   if (!gameRunning) return;
   const rect = gameArea.getBoundingClientRect();
-  if (canShowAchievement()) {
-    if (score >= CELEBRATION_50_SCORE && !celebration50Shown) {
-      celebration50Shown = true;
-      showCelebration50();
-      return;
-    }
-    if (score >= SECRET_SCORE && !secretShownThisGame) {
-      showSecretUnlocked();
-      return;
-    }
-    if (score >= HAIDER_150_SCORE && !haider150Shown) {
-      haider150Shown = true;
-      showHaider150Message();
-      return;
-    }
-    if (score >= SECRET_ENDING_SCORE && !secretEndingShown) {
-      secretEndingShown = true;
-      showSecretEnding();
-      return;
-    }
-    if (score >= QUOTE_OVERLAY_SCORE && !quoteSecretShownThisGame) {
-      showQuoteSecret();
-      return;
-    }
-  }
+  processAchievementQueue();
   if (score >= nextGlitterAtScore) {
     nextGlitterAtScore += QUOTE_SCORE_MILESTONE;
     spawnGlitterHeart();
@@ -625,12 +815,14 @@ function gameLoop() {
       }
       if (heart.isRainHeart) {
         addScore(HEART_RAIN_POINTS);
+        playSfx(sfxHeartRainEl);
         removeHeart(heart, true);
         continue;
       }
       if (catchStreak === HEART_RAIN_COMBO) {
         addScore(heart.isGolden ? GOLDEN_POINTS : POINTS_PER_HEART);
         startHeartRain();
+        playSfx(sfxHeartRainEl);
         removeHeart(heart, true);
         continue;
       }
@@ -646,6 +838,7 @@ function gameLoop() {
         }
       } else if (heart.isGolden) {
         showFloatingMessage(GOLDEN_MESSAGE);
+        playSfx(sfxGoldenEl);
       } else if (heart.isGlitterHeart) {
         showFloatingMessage(KITE_RUNNER_QUOTE);
       } else if (bestScoreAtStartOfGame > 0 && score > bestScoreAtStartOfGame && !newBestShownThisGame) {
@@ -659,6 +852,7 @@ function gameLoop() {
         else if (Math.random() < 0.2) showFloatingMessage(CUTE_MESSAGES[Math.floor(Math.random() * CUTE_MESSAGES.length)]);
       }
       hapticCatch();
+      playSfx(heart.isGolden ? sfxGoldenEl : sfxCatchEl);
       if (score > getBestScore()) {
         setBestScore(score);
         updateBestScoreDisplay();
@@ -687,6 +881,12 @@ function startGame(mode) {
   celebration50Shown = false;
   secretEndingShown = false;
   haider150Shown = false;
+   teaser1500Shown = false;
+   secret4000Shown = false;
+   achievementQueue = [];
+   achievementShowing = false;
+   lastAchievementTime = 0;
+   currentLevelIndex = 0;
   idleMessageShown = false;
   lastInteractionTime = Date.now();
   loveBoostEndTime = 0;
@@ -705,6 +905,7 @@ function startGame(mode) {
   scoreEl.textContent = '0';
   livesEl.textContent = '0';
   livesDisplay.classList.remove('warning');
+  updateLevelAndProgress();
   gameRunning = true;
   basketX = 50;
   updateBasketPosition();
@@ -823,8 +1024,8 @@ document.addEventListener('touchmove', (e) => {
   if (e.touches.length) updateCursorHeart(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: true });
 
-if (btnBasketMode) btnBasketMode.addEventListener('click', () => startGame('basket'));
-if (btnTapMode) btnTapMode.addEventListener('click', () => startGame('tap'));
+if (btnBasketMode) btnBasketMode.addEventListener('click', () => { ensureAudioInitialized(); startGame('basket'); });
+if (btnTapMode) btnTapMode.addEventListener('click', () => { ensureAudioInitialized(); startGame('tap'); });
 restartBtn.addEventListener('click', () => startGame(gameMode));
 if (backToMenuBtn) backToMenuBtn.addEventListener('click', () => {
   gameRunning = false;
@@ -835,6 +1036,7 @@ if (backToMenuBtn) backToMenuBtn.addEventListener('click', () => {
   showScreen(startScreen);
   fillStartHearts();
 });
+if (audioToggleBtn) audioToggleBtn.addEventListener('click', toggleAudio);
 if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSecret);
 if (quoteSecretContinueBtn) quoteSecretContinueBtn.addEventListener('click', resumeAfterQuoteSecret);
 if (celebration50Btn) celebration50Btn.addEventListener('click', resumeAfterCelebration50);

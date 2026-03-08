@@ -24,8 +24,17 @@
   <div id="game-screen" class="hidden">
     <div id="night-mode-msg" class="night-mode-msg hidden">Late night heart catching 🌙</div>
     <div id="love-boost-indicator" class="love-boost-indicator hidden">Love Boost 💖</div>
-    <div id="score-display">Score: <span id="score">0</span><span id="best-score" class="best-score hidden"></span></div>
+    <div id="score-display">
+      <div class="score-row">Score: <span id="score">0</span><span id="best-score" class="best-score hidden"></span></div>
+      <div class="level-row">
+        <span id="level-label">Level 1 — Warm Up</span>
+        <div class="level-progress">
+          <div id="level-progress-fill"></div>
+        </div>
+      </div>
+    </div>
     <div id="lives-display">Hearts missed: <span id="lives">0</span> / 3</div>
+    <div id="audio-toggle" class="audio-toggle" aria-label="Toggle sound" role="button">🔊</div>
 
     <!-- Secret at 100 -->
     <div id="secret-overlay" class="secret-overlay hidden">
@@ -88,6 +97,7 @@
       </div>
     </div>
 
+    <div id="level-popup" class="level-popup hidden"></div>
     <div id="floating-message" class="hidden"></div>
     <div id="catch-burst" class="hidden"></div>
     <div id="combo-sparkle" class="combo-sparkle hidden"></div>
@@ -117,6 +127,14 @@
       <button id="secret-msg-close" class="btn">Close</button>
     </div>
   </div>
+
+  <!-- Audio -->
+  <audio id="sfx-catch" src="catch.mp3" preload="auto"></audio>
+  <audio id="sfx-tap" src="tap-pop.mp3" preload="auto"></audio>
+  <audio id="sfx-golden" src="golden.mp3" preload="auto"></audio>
+  <audio id="sfx-combo" src="combo.mp3" preload="auto"></audio>
+  <audio id="sfx-heart-rain" src="heart-rain.mp3" preload="auto"></audio>
+  <audio id="bg-music" src="bg-music.mp3" preload="auto" loop></audio>
 
   <footer class="page-footer">Made with ❤️ by Haider</footer>
 

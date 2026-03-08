@@ -10,7 +10,7 @@ let floatingMessageTimeout;
 let catchStreak = 0;
 
 // The Kite Runner quote — show like other messages when she catches a special heart
-const KITE_RUNNER_QUOTE = "For you a thousand times over — The Kite Runner";
+const KITE_RUNNER_QUOTE = "For you a thousand times over";
 const QUOTE_HEART_CHANCE = 0.12;  // some special hearts show this quote
 
 // Heart emojis for variety

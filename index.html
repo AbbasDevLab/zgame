@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catch Haider's Love</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Start Screen -->
+  <div id="start-screen">
+    <h1 class="game-title">Catch Haider's Love</h1>
+    <p class="intro-message">This game was made specially for Zainab by Haider.</p>
+    <button id="start-btn" class="btn">Start Game</button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="hidden">
+    <div id="score-display">Score: <span id="score">0</span></div>
+    <div id="lives-display">Hearts missed: <span id="lives">0</span> / 5</div>
+    <div id="floating-message" class="hidden"></div>
+    <div id="game-area">
+      <div id="basket"></div>
+      <div id="hearts-container"></div>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over-screen" class="hidden">
+    <h2>Game Over</h2>
+    <p class="final-score">Final Score: <span id="final-score">0</span></p>
+    <p class="end-message">Zainab, you still win Haider's heart 💖</p>
+    <button id="restart-btn" class="btn">Play Again</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

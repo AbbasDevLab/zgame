@@ -552,6 +552,7 @@ function removeHeart(heart, caught) {
   heart.element.remove();
   if (!caught) {
     if (heart.isRainHeart) return;
+    if (Date.now() < loveBoostEndTime) return;
     catchStreak = 0;
     lives++;
     livesEl.textContent = lives;

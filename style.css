@@ -7,9 +7,11 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport - avoids iOS browser chrome */
   overflow: hidden;
   background: linear-gradient(180deg, #ffe4ec 0%, #fff0f5 40%, #fce4ec 100%);
   user-select: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 /* Start Screen */
@@ -73,7 +75,9 @@ body {
 #game-screen {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 #score-display,
@@ -111,6 +115,7 @@ body {
   bottom: 0;
   overflow: hidden;
   background: linear-gradient(180deg, transparent 0%, rgba(255, 228, 225, 0.3) 100%);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 #basket {
@@ -230,12 +235,13 @@ body {
   max-width: 320px;
 }
 
-/* Mobile responsive */
+/* iPhone / mobile browser friendly - keep basket above Safari UI */
 @media (max-width: 480px) {
   #basket {
     width: 60px;
     height: 40px;
     border-radius: 0 0 30px 30px;
+    bottom: 24px;
   }
 
   #basket::before {
@@ -251,3 +257,4 @@ body {
     font-size: 26px;
   }
 }
+

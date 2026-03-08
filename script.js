@@ -33,9 +33,14 @@ let secret4000Shown = false;
 let lastRandomHeartRainTime = 0;
 let audioInitialized = false;
 let isMuted = false;
+let slowMotionEndTime = 0;
 
 const SECRET_SCORE = 600;
 const ZAINAB_HEART_CHANCE = 1 / 100;
+const MYSTERY_HEART_CHANCE = 1 / 25;
+const MYSTERY_BONUS_POINTS = 50;
+const MYSTERY_DOUBLE_SCORE_MS = 5000;
+const SLOW_MOTION_DURATION_MS = 5000;
 const ZAINAB_BONUS = 100;
 const HEART_RAIN_COMBO = 6;
 const HEART_RAIN_DURATION_MS = 3000;
@@ -373,6 +378,11 @@ function spawnHeart() {
     spawnZainabHeart();
     return;
   }
+  const isMystery = !isHeartRainActive() && Math.random() < MYSTERY_HEART_CHANCE;
+  if (isMystery) {
+    spawnMysteryHeart();
+    return;
+  }
   const heart = document.createElement('div');
   heart.className = 'heart';
   const isGolden = Math.random() < GOLDEN_HEART_CHANCE;
@@ -419,6 +429,54 @@ function spawnZainabHeart() {
     isGolden: false,
     isZainabHeart: true
   });
+}
+
+function spawnMysteryHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart mystery-heart';
+  heart.innerHTML = '💜';
+  heart.title = 'Mystery!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.35,
+    message: null,
+    isGolden: false,
+    isMysteryHeart: true
+  });
+}
+
+function applyMysteryEffect() {
+  const roll = Math.floor(Math.random() * 4);
+  if (roll === 0) {
+    addScore(MYSTERY_BONUS_POINTS);
+    showFloatingMessage('🎁 Mystery! +50 points');
+    if (score > getBestScore()) {
+      setBestScore(score);
+      updateBestScoreDisplay();
+    }
+  } else if (roll === 1) {
+    startHeartRain();
+    showFloatingMessage('🎁 Mystery! Heart Rain!');
+    playSfx(sfxHeartRainEl);
+  } else if (roll === 2) {
+    slowMotionEndTime = Date.now() + SLOW_MOTION_DURATION_MS;
+    showFloatingMessage('🎁 Mystery! Slow motion!');
+  } else {
+    loveBoostEndTime = Math.max(loveBoostEndTime, Date.now() + MYSTERY_DOUBLE_SCORE_MS);
+    showFloatingMessage('🎁 Mystery! Double score!');
+    if (loveBoostIndicator) {
+      loveBoostIndicator.classList.remove('hidden');
+      setTimeout(() => loveBoostIndicator.classList.add('hidden'), MYSTERY_DOUBLE_SCORE_MS);
+    }
+  }
+  showComboSparkle();
 }
 
 function spawnRainHeart() {
@@ -805,14 +863,21 @@ function gameLoop() {
     idleMessageShown = true;
     showFloatingMessage(IDLE_MESSAGE);
   }
+  const slowMult = Date.now() < slowMotionEndTime ? 0.5 : 1;
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
-    heart.y += heart.speed;
+    heart.y += heart.speed * slowMult;
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCollision(heart)) {
       catchStreak++;
       if (heart.isZainabHeart) {
         showZainabHeartFound();
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isMysteryHeart) {
+        applyMysteryEffect();
+        playSfx(sfxGoldenEl);
         removeHeart(heart, true);
         continue;
       }
@@ -893,6 +958,7 @@ function startGame(mode) {
   idleMessageShown = false;
   lastInteractionTime = Date.now();
   loveBoostEndTime = 0;
+  slowMotionEndTime = 0;
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);
   heartRainInterval = null;

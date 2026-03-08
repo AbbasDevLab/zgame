@@ -23,6 +23,19 @@ body.night-mode #game-area {
   background: linear-gradient(180deg, transparent 0%, rgba(80, 40, 80, 0.2) 100%);
 }
 
+body.night-mode .game-title {
+  color: #e8b4e8;
+  text-shadow: 0 0 20px rgba(200, 120, 200, 0.4);
+}
+
+body.night-mode .intro-message {
+  color: #c9a0c9;
+}
+
+body.night-mode .start-heart {
+  opacity: 0.5;
+}
+
 /* Start Screen */
 #start-screen {
   display: flex;

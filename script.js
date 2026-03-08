@@ -912,13 +912,7 @@ function startGame(mode) {
   basketX = 50;
   updateBasketPosition();
   gameScreen.classList.toggle('tap-mode', gameMode === 'tap');
-  if (isNightMode()) {
-    document.body.classList.add('night-mode');
-    if (nightModeMsg) nightModeMsg.classList.remove('hidden');
-  } else {
-    document.body.classList.remove('night-mode');
-    if (nightModeMsg) nightModeMsg.classList.add('hidden');
-  }
+  applyNightMode();
   showScreen(gameScreen);
   updateBestScoreDisplay();
   spawnHeart();
@@ -929,6 +923,16 @@ function startGame(mode) {
 function isNightMode() {
   const hour = new Date().getHours();
   return hour >= 20 || hour < 6;
+}
+
+function applyNightMode() {
+  if (isNightMode()) {
+    document.body.classList.add('night-mode');
+    if (nightModeMsg) nightModeMsg.classList.remove('hidden');
+  } else {
+    document.body.classList.remove('night-mode');
+    if (nightModeMsg) nightModeMsg.classList.add('hidden');
+  }
 }
 
 // Start screen floating hearts
@@ -962,6 +966,7 @@ function fillGameOverHearts() {
 }
 
 fillStartHearts();
+applyNightMode();
 
 // Easter egg: tap title 5 times
 const titleEl = document.getElementById('game-title');
@@ -1037,6 +1042,7 @@ if (backToMenuBtn) backToMenuBtn.addEventListener('click', () => {
   hearts = [];
   showScreen(startScreen);
   fillStartHearts();
+  applyNightMode();
 });
 if (audioToggleBtn) audioToggleBtn.addEventListener('click', toggleAudio);
 if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSecret);

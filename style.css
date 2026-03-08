@@ -641,6 +641,28 @@ body.night-mode .start-heart {
   background: linear-gradient(180deg, #ffe4ec 0%, #fff0f5 100%);
 }
 
+body.night-mode #game-over-screen {
+  background: linear-gradient(180deg, #1a0a14 0%, #2d1b2e 50%, #1a0a14 100%);
+}
+
+body.night-mode #game-over-screen h2 {
+  color: #e8b4e8;
+  text-shadow: 0 0 16px rgba(200, 120, 200, 0.3);
+}
+
+body.night-mode #game-over-screen .final-score,
+body.night-mode #game-over-screen .end-message {
+  color: #c9a0c9;
+}
+
+body.night-mode #game-over-screen .sign-off {
+  color: #b080a0;
+}
+
+body.night-mode #game-over-screen .gameover-heart {
+  opacity: 0.4;
+}
+
 #game-over-screen h2 {
   font-size: clamp(1.8rem, 5vw, 2.5rem);
   color: #c71585;

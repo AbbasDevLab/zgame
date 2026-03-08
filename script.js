@@ -655,6 +655,7 @@ function endGame() {
   hearts = [];
   finalScoreEl.textContent = score;
   if (score > getBestScore()) setBestScore(score);
+  applyNightMode();
   showScreen(gameOverScreen);
   fillGameOverHearts();
 }

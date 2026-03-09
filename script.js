@@ -38,6 +38,9 @@ let zainabSkyEventShown = false;
 let luckyHeartShownThisGame = false;
 let magnetEndTime = 0;
 let skyFillShownThisGame = false;
+let windEndTime = 0;
+let windDirection = 1;
+let lastWindCheckTime = 0;
 
 const SECRET_SCORE = 600;
 const SKY_FILL_SCORE = 3000;
@@ -56,6 +59,12 @@ const BROKEN_HEART_CHANCE = 1 / 20;
 const BROKEN_HEART_PENALTY = 50;
 const ZIGZAG_MIN_SCORE = 1200;
 const ZIGZAG_CHANCE = 0.28;
+const WIND_DURATION_MS = 4000;
+const WIND_COOLDOWN_MS = 38000;
+const WIND_DRIFT = 0.38;
+const WIND_MIN_SCORE = 150;
+const WIND_CHECK_INTERVAL_MS = 2500;
+const WIND_CHANCE = 0.07;
 const MYSTERY_DOUBLE_SCORE_MS = 5000;
 const SLOW_MOTION_DURATION_MS = 5000;
 const ZAINAB_BONUS = 100;
@@ -142,6 +151,7 @@ const secretEndingOverlay = document.getElementById('secret-ending-overlay');
 const secretEndingBtn = document.getElementById('secret-ending-btn');
 const loveBoostIndicator = document.getElementById('love-boost-indicator');
 const magnetIndicator = document.getElementById('magnet-indicator');
+const windIndicator = document.getElementById('wind-indicator');
 const nightModeMsg = document.getElementById('night-mode-msg');
 const comboSparkleEl = document.getElementById('combo-sparkle');
 const zainabHeartOverlay = document.getElementById('zainab-heart-overlay');
@@ -177,8 +187,9 @@ const sfxHeartRainEl = document.getElementById('sfx-heart-rain');
 const bgMusicEl = document.getElementById('bg-music');
 
 const BASKET_WIDTH = 12;
-const HEART_SPAWN_MIN = 10;
-const HEART_SPAWN_MAX = 90;
+const HEART_SPAWN_MIN = 14;
+const HEART_SPAWN_MAX = 86;
+const HEART_EDGE_MARGIN = 6;
 const MAX_LIVES = 3;
 const POINTS_PER_HEART = 5;
 const TAP_POINTS = 5;
@@ -620,6 +631,22 @@ function isMagnetActive() {
   return Date.now() < magnetEndTime;
 }
 
+function isWindActive() {
+  return Date.now() < windEndTime;
+}
+
+function startWind() {
+  windEndTime = Date.now() + WIND_DURATION_MS;
+  windDirection = Math.random() < 0.5 ? -1 : 1;
+  lastWindCheckTime = Date.now();
+  showFloatingMessage('🌬️ Windy!');
+  if (windIndicator) {
+    windIndicator.classList.remove('hidden');
+    windIndicator.textContent = windDirection > 0 ? '🌬️ Wind →' : '🌬️ ← Wind';
+    setTimeout(() => windIndicator.classList.add('hidden'), WIND_DURATION_MS);
+  }
+}
+
 function spawnBrokenHeart() {
   if (!gameRunning) return;
   const heart = document.createElement('div');
@@ -680,7 +707,7 @@ function spawnRainHeart() {
   const heart = document.createElement('div');
   heart.className = 'heart rain-heart';
   heart.innerHTML = HEARTS[Math.floor(Math.random() * HEARTS.length)];
-  const x = Math.random() * 100;
+  const x = HEART_EDGE_MARGIN + Math.random() * (100 - 2 * HEART_EDGE_MARGIN);
   heart.style.left = x + '%';
   heartsContainer.appendChild(heart);
   hearts.push({
@@ -1116,18 +1143,29 @@ function gameLoop() {
     idleMessageShown = true;
     showFloatingMessage(IDLE_MESSAGE);
   }
-  const slowMult = Date.now() < slowMotionEndTime ? 0.5 : 1;
+  const now = Date.now();
+  if (!isWindActive() && !isHeartRainActive() && score >= WIND_MIN_SCORE && now - lastWindCheckTime >= WIND_CHECK_INTERVAL_MS) {
+    lastWindCheckTime = now;
+    if (Math.random() < WIND_CHANCE) startWind();
+  }
+  const slowMult = now < slowMotionEndTime ? 0.5 : 1;
   const magnetPull = gameMode === 'basket' && isMagnetActive();
+  const windActive = isWindActive();
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
     if (magnetPull && !heart.isMagnetHeart) {
       const dx = basketX - heart.x;
       heart.x += dx * 0.07;
-      heart.x = Math.max(0, Math.min(100, heart.x));
+      heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
       heart.element.style.left = heart.x + '%';
     } else if (heart.wobble) {
       heart.x = heart.baseX + Math.sin(heart.y * 0.04 + heart.wobblePhase) * heart.wobbleAmplitude;
-      heart.x = Math.max(0, Math.min(100, heart.x));
+      heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
+      heart.element.style.left = heart.x + '%';
+    }
+    if (windActive) {
+      heart.x += windDirection * WIND_DRIFT;
+      heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
       heart.element.style.left = heart.x + '%';
     }
     heart.y += heart.speed * slowMult;
@@ -1270,6 +1308,8 @@ function startGame(mode) {
   lastInteractionTime = Date.now();
   loveBoostEndTime = 0;
   magnetEndTime = 0;
+  windEndTime = 0;
+  lastWindCheckTime = 0;
   slowMotionEndTime = 0;
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);
@@ -1282,6 +1322,7 @@ function startGame(mode) {
   if (haider150Overlay) haider150Overlay.classList.add('hidden');
   if (loveBoostIndicator) loveBoostIndicator.classList.add('hidden');
   if (magnetIndicator) magnetIndicator.classList.add('hidden');
+  if (windIndicator) windIndicator.classList.add('hidden');
   if (gameAreaEl) gameAreaEl.classList.remove('heart-rain');
   if (heartRainSparkles) heartRainSparkles.classList.add('hidden');
   scoreEl.textContent = '0';

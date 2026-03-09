@@ -1072,6 +1072,27 @@ audio {
   50% { opacity: 0.9; transform: translateX(-50%) scale(1.05); }
 }
 
+/* Wind indicator */
+.wind-indicator {
+  position: absolute;
+  top: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 12px;
+  background: linear-gradient(135deg, rgba(135, 206, 250, 0.95), rgba(176, 224, 230, 0.95));
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #333;
+  z-index: 15;
+  animation: windPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes windPulse {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.85; transform: translateX(-50%) scale(1.03); }
+}
+
 /* Night mode message */
 .night-mode-msg {
   position: absolute;

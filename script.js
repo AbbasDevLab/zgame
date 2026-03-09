@@ -835,7 +835,8 @@ function checkCollision(heart) {
   const basketTop = basketRect.top;
   const basketLeft = basketRect.left;
   const basketRight = basketRect.right;
-  if (heartBottom >= basketTop - 10 && heartBottom <= basketTop + 30) {
+  // Slightly generous vertical band so special hearts (like Lucky) don't slip through.
+  if (heartBottom >= basketTop - 18 && heartBottom <= basketTop + 36) {
     if (heartCenterX >= basketLeft && heartCenterX <= basketRight) {
       return true;
     }

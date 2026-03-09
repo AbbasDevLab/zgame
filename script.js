@@ -44,6 +44,7 @@ let lastWindCheckTime = 0;
 let pendingMisses = [];
 let consecutiveMisses = 0;
 let bonusHeartSpawnRemaining = 0;
+let shieldCharges = 0;
 
 const SECRET_SCORE = 600;
 const MISS_GRACE_MS = 350;
@@ -65,6 +66,7 @@ const MAGNET_HEART_CHANCE = 1 / 40;
 const MAGNET_DURATION_MS = 5000;
 const BROKEN_HEART_CHANCE = 1 / 20;
 const BROKEN_HEART_PENALTY = 50;
+const SHIELD_HEART_CHANCE = 1 / 45;
 const ZIGZAG_MIN_SCORE = 1200;
 const ZIGZAG_CHANCE = 0.28;
 const WIND_DURATION_MS = 4000;
@@ -160,6 +162,7 @@ const secretEndingBtn = document.getElementById('secret-ending-btn');
 const loveBoostIndicator = document.getElementById('love-boost-indicator');
 const magnetIndicator = document.getElementById('magnet-indicator');
 const windIndicator = document.getElementById('wind-indicator');
+const shieldIndicator = document.getElementById('shield-indicator');
 const nightModeMsg = document.getElementById('night-mode-msg');
 const comboSparkleEl = document.getElementById('combo-sparkle');
 const zainabHeartOverlay = document.getElementById('zainab-heart-overlay');
@@ -516,6 +519,11 @@ function spawnHeart() {
     spawnBrownHeart();
     return;
   }
+  const isShield = !isHeartRainActive() && Math.random() < SHIELD_HEART_CHANCE;
+  if (isShield) {
+    spawnShieldHeart();
+    return;
+  }
   const isMagnet = !isHeartRainActive() && Math.random() < MAGNET_HEART_CHANCE;
   if (isMagnet) {
     spawnMagnetHeart();
@@ -625,6 +633,27 @@ function spawnBrownHeart() {
   });
 }
 
+function spawnShieldHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart shield-heart';
+  heart.innerHTML = '💙';
+  heart.title = 'Shield!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.35,
+    message: null,
+    isGolden: false,
+    isShieldHeart: true
+  });
+}
+
 function spawnMagnetHeart() {
   if (!gameRunning) return;
   const heart = document.createElement('div');
@@ -688,6 +717,15 @@ function spawnBrokenHeart() {
 }
 
 function applyBrokenHeartPenalty() {
+  if (shieldCharges > 0) {
+    shieldCharges--;
+    if (shieldIndicator) {
+      if (shieldCharges <= 0) shieldIndicator.classList.add('hidden');
+      else shieldIndicator.textContent = `🛡 Shield x${shieldCharges}`;
+    }
+    showFloatingMessage('🛡 Shield saved you!');
+    return;
+  }
   catchStreak = 0;
   score = Math.max(0, score - BROKEN_HEART_PENALTY);
   scoreEl.textContent = score;
@@ -848,7 +886,7 @@ function spawnLuckyHeart() {
 function isNormalHeart(heart) {
   return !heart.isRainHeart && !heart.isBrokenHeart && !heart.isZainabHeart &&
     !heart.isMysteryHeart && !heart.isBrownHeart && !heart.isLuckyHeart &&
-    !heart.isMagnetHeart && !heart.isGlitterHeart;
+    !heart.isMagnetHeart && !heart.isGlitterHeart && !heart.isShieldHeart;
 }
 
 function checkCollision(heart) {
@@ -1131,6 +1169,17 @@ function onHeartTapped(heartObj) {
     removeHeart(heartObj, true);
     return;
   }
+  if (heartObj.isShieldHeart) {
+    shieldCharges++;
+    if (shieldIndicator) {
+      shieldIndicator.classList.remove('hidden');
+      shieldIndicator.textContent = shieldCharges > 1 ? `🛡 Shield x${shieldCharges}` : '🛡 Heart Shield!';
+    }
+    showFloatingMessage('🛡 Heart Shield!');
+    playSfx(sfxGoldenEl);
+    removeHeart(heartObj, true);
+    return;
+  }
   if (heartObj.isLuckyHeart) {
     addScore(LUCKY_HEART_POINTS);
     if (score > getBestScore()) {
@@ -1318,6 +1367,17 @@ function gameLoop() {
         removeHeart(heart, true);
         continue;
       }
+      if (heart.isShieldHeart) {
+        shieldCharges++;
+        if (shieldIndicator) {
+          shieldIndicator.classList.remove('hidden');
+          shieldIndicator.textContent = shieldCharges > 1 ? `🛡 Shield x${shieldCharges}` : '🛡 Heart Shield!';
+        }
+        showFloatingMessage('🛡 Heart Shield!');
+        playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
       if (catchStreak === HEART_RAIN_COMBO) {
         addScore(heart.isGolden ? GOLDEN_POINTS : POINTS_PER_HEART);
         startHeartRain();
@@ -1397,6 +1457,7 @@ function startGame(mode) {
   pendingMisses = [];
   consecutiveMisses = 0;
   bonusHeartSpawnRemaining = 0;
+  shieldCharges = 0;
   slowMotionEndTime = 0;
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);
@@ -1410,6 +1471,7 @@ function startGame(mode) {
   if (loveBoostIndicator) loveBoostIndicator.classList.add('hidden');
   if (magnetIndicator) magnetIndicator.classList.add('hidden');
   if (windIndicator) windIndicator.classList.add('hidden');
+  if (shieldIndicator) shieldIndicator.classList.add('hidden');
   if (gameAreaEl) gameAreaEl.classList.remove('heart-rain');
   if (heartRainSparkles) heartRainSparkles.classList.add('hidden');
   scoreEl.textContent = '0';

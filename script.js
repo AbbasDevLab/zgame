@@ -35,14 +35,27 @@ let audioInitialized = false;
 let isMuted = false;
 let slowMotionEndTime = 0;
 let zainabSkyEventShown = false;
+let luckyHeartShownThisGame = false;
+let magnetEndTime = 0;
+let skyFillShownThisGame = false;
 
 const SECRET_SCORE = 600;
+const SKY_FILL_SCORE = 3000;
+const SKY_FILL_RAIN_MS = 2000;
+const LUCKY_HEART_SCORE = 700;
+const LUCKY_HEART_POINTS = 250;
 const ZAINAB_SKY_SCORE = 1500;
 const ZAINAB_HEART_CHANCE = 1 / 100;
 const MYSTERY_HEART_CHANCE = 1 / 25;
 const MYSTERY_BONUS_POINTS = 50;
 const BROWN_HEART_CHANCE = 1 / 30;
 const BROWN_BONUS_POINTS = 100;
+const MAGNET_HEART_CHANCE = 1 / 40;
+const MAGNET_DURATION_MS = 5000;
+const BROKEN_HEART_CHANCE = 1 / 20;
+const BROKEN_HEART_PENALTY = 50;
+const ZIGZAG_MIN_SCORE = 1200;
+const ZIGZAG_CHANCE = 0.28;
 const MYSTERY_DOUBLE_SCORE_MS = 5000;
 const SLOW_MOTION_DURATION_MS = 5000;
 const ZAINAB_BONUS = 100;
@@ -128,6 +141,7 @@ const celebration50Btn = document.getElementById('celebration-50-btn');
 const secretEndingOverlay = document.getElementById('secret-ending-overlay');
 const secretEndingBtn = document.getElementById('secret-ending-btn');
 const loveBoostIndicator = document.getElementById('love-boost-indicator');
+const magnetIndicator = document.getElementById('magnet-indicator');
 const nightModeMsg = document.getElementById('night-mode-msg');
 const comboSparkleEl = document.getElementById('combo-sparkle');
 const zainabHeartOverlay = document.getElementById('zainab-heart-overlay');
@@ -252,9 +266,18 @@ function checkScoreMilestones() {
     zainabSkyEventShown = true;
     triggerZainabSkyEvent();
   }
+  if (!luckyHeartShownThisGame && score >= LUCKY_HEART_SCORE) {
+    luckyHeartShownThisGame = true;
+    spawnLuckyHeart();
+  }
   if (!secret4000Shown && score >= SECRET_UNLOCK_SCORE) {
     secret4000Shown = true;
     enqueueAchievement('secret-4000');
+  }
+  if (!skyFillShownThisGame && score >= SKY_FILL_SCORE) {
+    skyFillShownThisGame = true;
+    showFloatingMessage("You've collected enough hearts to fill the sky.");
+    setTimeout(() => startHeartRain(SKY_FILL_RAIN_MS), 1500);
   }
   if (score >= HEART_RAIN_RANDOM_SCORE && !isHeartRainActive()) {
     const now = Date.now();
@@ -313,11 +336,20 @@ function getSpeedLevel() {
   return Math.min(5, Math.floor(score / SPEED_UP_EVERY_POINTS));
 }
 
+/** 0–500: 1x, 500–1500: 1.1x, 1500–3000: 1.2x, 3000+: 1.3x */
+function getScoreSpeedMultiplier() {
+  if (score >= 3000) return 1.3;
+  if (score >= 1500) return 1.2;
+  if (score >= 500) return 1.1;
+  return 1;
+}
+
 function getCurrentSpeed() {
   const level = getSpeedLevel();
   const extra = (score % SPEED_UP_EVERY_POINTS) / SPEED_UP_EVERY_POINTS;
   const base = BASE_FALL_SPEED + level * 0.6 + extra * 0.6;
-  return Math.min(MAX_FALL_SPEED, base);
+  const capped = Math.min(MAX_FALL_SPEED, base);
+  return Math.min(MAX_FALL_SPEED * 1.35, capped * getScoreSpeedMultiplier());
 }
 
 function showFloatingMessage(text) {
@@ -454,6 +486,16 @@ function spawnHeart() {
     spawnBrownHeart();
     return;
   }
+  const isMagnet = !isHeartRainActive() && Math.random() < MAGNET_HEART_CHANCE;
+  if (isMagnet) {
+    spawnMagnetHeart();
+    return;
+  }
+  const isBroken = !isHeartRainActive() && Math.random() < BROKEN_HEART_CHANCE;
+  if (isBroken) {
+    spawnBrokenHeart();
+    return;
+  }
   const heart = document.createElement('div');
   heart.className = 'heart';
   const isGolden = Math.random() < GOLDEN_HEART_CHANCE;
@@ -472,14 +514,22 @@ function spawnHeart() {
   heart.style.left = x + '%';
   heartsContainer.appendChild(heart);
   const speed = getCurrentSpeed();
-  hearts.push({
+  const useWobble = score >= ZIGZAG_MIN_SCORE && Math.random() < ZIGZAG_CHANCE;
+  const obj = {
     element: heart,
     x: x,
     y: 0,
     speed: speed + Math.random() * 0.35,
     message: heart.dataset.message || null,
     isGolden: isGolden
-  });
+  };
+  if (useWobble) {
+    obj.wobble = true;
+    obj.baseX = x;
+    obj.wobbleAmplitude = 10 + Math.random() * 10;
+    obj.wobblePhase = Math.random() * Math.PI * 2;
+  }
+  hearts.push(obj);
 }
 
 function spawnZainabHeart() {
@@ -545,6 +595,59 @@ function spawnBrownHeart() {
   });
 }
 
+function spawnMagnetHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart magnet-heart';
+  heart.innerHTML = '🧲💖';
+  heart.title = 'Magnet!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.35,
+    message: null,
+    isGolden: false,
+    isMagnetHeart: true
+  });
+}
+
+function isMagnetActive() {
+  return Date.now() < magnetEndTime;
+}
+
+function spawnBrokenHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart broken-heart';
+  heart.innerHTML = '💔';
+  heart.title = 'Avoid!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.35,
+    message: null,
+    isGolden: false,
+    isBrokenHeart: true
+  });
+}
+
+function applyBrokenHeartPenalty() {
+  catchStreak = 0;
+  score = Math.max(0, score - BROKEN_HEART_PENALTY);
+  scoreEl.textContent = score;
+  updateLevelAndProgress();
+}
+
 function applyMysteryEffect() {
   const roll = Math.floor(Math.random() * 4);
   if (roll === 0) {
@@ -591,10 +694,11 @@ function spawnRainHeart() {
   });
 }
 
-function startHeartRain() {
+function startHeartRain(durationMs) {
   catchStreak = 0;
-  heartRainEndTime = Date.now() + HEART_RAIN_DURATION_MS;
-  showFloatingMessage('💞 Heart Rain!');
+  const duration = durationMs !== undefined ? durationMs : HEART_RAIN_DURATION_MS;
+  heartRainEndTime = Date.now() + duration;
+  if (durationMs === undefined) showFloatingMessage('💞 Heart Rain!');
   if (gameAreaEl) gameAreaEl.classList.add('heart-rain');
   if (heartRainSparkles) {
     heartRainSparkles.innerHTML = '';
@@ -667,6 +771,31 @@ function spawnGlitterHeart() {
     speed: speed + Math.random() * 0.35,
     message: KITE_RUNNER_QUOTE,
     isGlitterHeart: true
+  });
+}
+
+function spawnLuckyHeart() {
+  if (!gameRunning) return;
+  if (isHeartRainActive()) {
+    setTimeout(spawnLuckyHeart, 600);
+    return;
+  }
+  const heart = document.createElement('div');
+  heart.className = 'heart lucky-heart';
+  heart.innerHTML = '🍀💖';
+  heart.title = 'Lucky!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed() * 0.9;
+  hearts.push({
+    element: heart,
+    x: x,
+    y: 0,
+    speed: speed + Math.random() * 0.3,
+    message: null,
+    isGolden: false,
+    isLuckyHeart: true
   });
 }
 
@@ -911,6 +1040,36 @@ function onHeartTapped(heartObj) {
     removeHeart(heartObj, true);
     return;
   }
+  if (heartObj.isLuckyHeart) {
+    addScore(LUCKY_HEART_POINTS);
+    if (score > getBestScore()) {
+      setBestScore(score);
+      updateBestScoreDisplay();
+    }
+    showFloatingMessage('🍀 Lucky Catch!');
+    showComboSparkle();
+    playSfx(sfxGoldenEl);
+    removeHeart(heartObj, true);
+    return;
+  }
+  if (heartObj.isMagnetHeart) {
+    addScore(TAP_POINTS);
+    magnetEndTime = Date.now() + MAGNET_DURATION_MS;
+    showFloatingMessage('🧲 Heart Magnet!');
+    if (magnetIndicator) {
+      magnetIndicator.classList.remove('hidden');
+      setTimeout(() => magnetIndicator.classList.add('hidden'), MAGNET_DURATION_MS);
+    }
+    playSfx(sfxGoldenEl);
+    removeHeart(heartObj, true);
+    return;
+  }
+  if (heartObj.isBrokenHeart) {
+    applyBrokenHeartPenalty();
+    showFloatingMessage('💔 Broken heart! -50');
+    removeHeart(heartObj, true);
+    return;
+  }
   catchStreak++;
   if (catchStreak === HEART_RAIN_COMBO) {
     addScore(heartObj.isGolden ? GOLDEN_POINTS : TAP_POINTS);
@@ -958,8 +1117,19 @@ function gameLoop() {
     showFloatingMessage(IDLE_MESSAGE);
   }
   const slowMult = Date.now() < slowMotionEndTime ? 0.5 : 1;
+  const magnetPull = gameMode === 'basket' && isMagnetActive();
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
+    if (magnetPull && !heart.isMagnetHeart) {
+      const dx = basketX - heart.x;
+      heart.x += dx * 0.07;
+      heart.x = Math.max(0, Math.min(100, heart.x));
+      heart.element.style.left = heart.x + '%';
+    } else if (heart.wobble) {
+      heart.x = heart.baseX + Math.sin(heart.y * 0.04 + heart.wobblePhase) * heart.wobbleAmplitude;
+      heart.x = Math.max(0, Math.min(100, heart.x));
+      heart.element.style.left = heart.x + '%';
+    }
     heart.y += heart.speed * slowMult;
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCollision(heart)) {
@@ -986,6 +1156,36 @@ function gameLoop() {
         playBrownBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
         showComboSparkle();
         playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isLuckyHeart) {
+        addScore(LUCKY_HEART_POINTS);
+        if (score > getBestScore()) {
+          setBestScore(score);
+          updateBestScoreDisplay();
+        }
+        showFloatingMessage('🍀 Lucky Catch!');
+        showComboSparkle();
+        playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isMagnetHeart) {
+        addScore(POINTS_PER_HEART);
+        magnetEndTime = Date.now() + MAGNET_DURATION_MS;
+        showFloatingMessage('🧲 Heart Magnet!');
+        if (magnetIndicator) {
+          magnetIndicator.classList.remove('hidden');
+          setTimeout(() => magnetIndicator.classList.add('hidden'), MAGNET_DURATION_MS);
+        }
+        playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isBrokenHeart) {
+        applyBrokenHeartPenalty();
+        showFloatingMessage('💔 Broken heart! -50');
         removeHeart(heart, true);
         continue;
       }
@@ -1060,6 +1260,8 @@ function startGame(mode) {
    teaser1500Shown = false;
    secret4000Shown = false;
    zainabSkyEventShown = false;
+   luckyHeartShownThisGame = false;
+   skyFillShownThisGame = false;
    achievementQueue = [];
    achievementShowing = false;
    lastAchievementTime = 0;
@@ -1067,6 +1269,7 @@ function startGame(mode) {
   idleMessageShown = false;
   lastInteractionTime = Date.now();
   loveBoostEndTime = 0;
+  magnetEndTime = 0;
   slowMotionEndTime = 0;
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);
@@ -1078,6 +1281,7 @@ function startGame(mode) {
   if (zainabHeartOverlay) zainabHeartOverlay.classList.add('hidden');
   if (haider150Overlay) haider150Overlay.classList.add('hidden');
   if (loveBoostIndicator) loveBoostIndicator.classList.add('hidden');
+  if (magnetIndicator) magnetIndicator.classList.add('hidden');
   if (gameAreaEl) gameAreaEl.classList.remove('heart-rain');
   if (heartRainSparkles) heartRainSparkles.classList.add('hidden');
   scoreEl.textContent = '0';

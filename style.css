@@ -652,6 +652,29 @@ body.night-mode .start-heart {
   to   { opacity: 1; transform: scale(1.05); }
 }
 
+.heart.magnet-heart {
+  font-size: clamp(28px, 4.5vw, 38px);
+  filter: drop-shadow(0 0 10px rgba(100, 149, 237, 0.8)) drop-shadow(0 0 16px rgba(147, 112, 219, 0.6));
+  animation: magnetHeartPulse 1s ease-in-out infinite;
+}
+
+@keyframes magnetHeartPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.95; }
+}
+
+.heart.broken-heart {
+  font-size: clamp(26px, 4vw, 34px);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  opacity: 0.9;
+  animation: brokenHeartShake 0.5s ease-in-out infinite;
+}
+
+@keyframes brokenHeartShake {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
 .burst-piece-brown {
   font-size: 16px;
   opacity: 0.95;
@@ -688,6 +711,43 @@ body.night-mode .start-heart {
 @keyframes wiggle {
   0%, 100% { transform: rotate(-5deg); }
   50% { transform: rotate(5deg); }
+}
+
+/* Lucky heart – once per game after 700 pts, +250, rainbow trail */
+.heart.lucky-heart {
+  font-size: 36px;
+  animation: luckyPulse 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9))
+          drop-shadow(0 2px 4px rgba(255, 105, 180, 0.8))
+          drop-shadow(-2px 0 6px rgba(255, 0, 128, 0.6))
+          drop-shadow(2px 0 6px rgba(0, 191, 255, 0.5))
+          drop-shadow(0 -2px 6px rgba(50, 205, 50, 0.5));
+  position: relative;
+}
+
+.heart.lucky-heart::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,
+    rgba(255, 105, 180, 0.25),
+    rgba(255, 215, 0, 0.2),
+    rgba(0, 255, 127, 0.2),
+    rgba(0, 191, 255, 0.25));
+  z-index: -1;
+  animation: luckyShimmer 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes luckyPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.95; }
+}
+
+@keyframes luckyShimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
 /* Floating message when heart caught */
@@ -987,6 +1047,27 @@ audio {
 }
 
 @keyframes boostPulse {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.9; transform: translateX(-50%) scale(1.05); }
+}
+
+/* Magnet indicator (active power-up) */
+.magnet-indicator {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(100, 149, 237, 0.95), rgba(147, 112, 219, 0.95));
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  z-index: 15;
+  animation: magnetPulse 1s ease-in-out infinite;
+}
+
+@keyframes magnetPulse {
   0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
   50% { opacity: 0.9; transform: translateX(-50%) scale(1.05); }
 }

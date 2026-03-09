@@ -45,6 +45,7 @@ let pendingMisses = [];
 let consecutiveMisses = 0;
 let bonusHeartSpawnRemaining = 0;
 let shieldCharges = 0;
+let currentComboMultiplier = 1;
 
 const SECRET_SCORE = 600;
 const MISS_GRACE_MS = 350;
@@ -64,7 +65,7 @@ const BROWN_HEART_CHANCE = 1 / 30;
 const BROWN_BONUS_POINTS = 100;
 const MAGNET_HEART_CHANCE = 1 / 40;
 const MAGNET_DURATION_MS = 5000;
-const BROKEN_HEART_CHANCE = 1 / 20;
+const BROKEN_HEART_CHANCE = 1 / 16;
 const BROKEN_HEART_PENALTY = 50;
 const SHIELD_HEART_CHANCE = 1 / 45;
 const ZIGZAG_MIN_SCORE = 1200;
@@ -163,6 +164,7 @@ const loveBoostIndicator = document.getElementById('love-boost-indicator');
 const magnetIndicator = document.getElementById('magnet-indicator');
 const windIndicator = document.getElementById('wind-indicator');
 const shieldIndicator = document.getElementById('shield-indicator');
+const comboIndicator = document.getElementById('combo-indicator');
 const nightModeMsg = document.getElementById('night-mode-msg');
 const comboSparkleEl = document.getElementById('combo-sparkle');
 const zainabHeartOverlay = document.getElementById('zainab-heart-overlay');
@@ -208,6 +210,9 @@ const GOLDEN_POINTS = 50;
 const GOLDEN_HEART_CHANCE = 1 / 20;
 const COMBO_COUNT = 3;
 const COMBO_BONUS = 30;
+const COMBO_X2_THRESHOLD = 10;
+const COMBO_X3_THRESHOLD = 20;
+const COMBO_X4_THRESHOLD = 30;
 const IDLE_SEC = 6;
 const LOVE_BOOST_DURATION_MS = 7000;
 const SECRET_ENDING_SCORE = 2200;
@@ -494,6 +499,13 @@ function isHeartRainActive() {
 
 function spawnHeart() {
   if (!gameRunning) return;
+  // Smart spawn balancing: avoid overcrowding and keep flow.
+  if (!isHeartRainActive()) {
+    if (hearts.length > 7) {
+      // Too many hearts on screen, let them clear before spawning more.
+      return;
+    }
+  }
   if (bonusHeartSpawnRemaining > 0 && !isHeartRainActive()) {
     bonusHeartSpawnRemaining--;
     if (Math.random() < 0.5) {
@@ -568,6 +580,14 @@ function spawnHeart() {
     obj.wobblePhase = Math.random() * Math.PI * 2;
   }
   hearts.push(obj);
+  // If the screen is too empty, gently top up with an extra heart.
+  if (!isHeartRainActive() && hearts.length < 3) {
+    setTimeout(() => {
+      if (gameRunning && !isHeartRainActive() && hearts.length < 3) {
+        spawnHeart();
+      }
+    }, SPAWN_RATE_MS * 0.5);
+  }
 }
 
 function spawnZainabHeart() {
@@ -921,8 +941,21 @@ function checkCloseCatch(heart) {
 }
 
 function addScore(pts) {
-  const mult = (Date.now() < loveBoostEndTime) ? 2 : 1;
-  score += pts * mult;
+  const loveMult = (Date.now() < loveBoostEndTime) ? 2 : 1;
+  let comboMult = 1;
+  if (catchStreak >= COMBO_X4_THRESHOLD) comboMult = 4;
+  else if (catchStreak >= COMBO_X3_THRESHOLD) comboMult = 3;
+  else if (catchStreak >= COMBO_X2_THRESHOLD) comboMult = 2;
+  if (comboMult !== currentComboMultiplier) {
+    currentComboMultiplier = comboMult;
+    if (comboIndicator) {
+      comboIndicator.classList.toggle('hidden', currentComboMultiplier === 1);
+      if (currentComboMultiplier > 1) {
+        comboIndicator.textContent = `Combo x${currentComboMultiplier}`;
+      }
+    }
+  }
+  score += pts * loveMult * comboMult;
   scoreEl.textContent = score;
   updateLevelAndProgress();
   checkScoreMilestones();
@@ -1458,6 +1491,7 @@ function startGame(mode) {
   consecutiveMisses = 0;
   bonusHeartSpawnRemaining = 0;
   shieldCharges = 0;
+  currentComboMultiplier = 1;
   slowMotionEndTime = 0;
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);
@@ -1472,6 +1506,7 @@ function startGame(mode) {
   if (magnetIndicator) magnetIndicator.classList.add('hidden');
   if (windIndicator) windIndicator.classList.add('hidden');
   if (shieldIndicator) shieldIndicator.classList.add('hidden');
+  if (comboIndicator) comboIndicator.classList.add('hidden');
   if (gameAreaEl) gameAreaEl.classList.remove('heart-rain');
   if (heartRainSparkles) heartRainSparkles.classList.add('hidden');
   scoreEl.textContent = '0';

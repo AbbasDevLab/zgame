@@ -1125,6 +1125,14 @@ audio {
   50% { opacity: 0.9; transform: translateX(-50%) scale(1.04); }
 }
 
+.combo-indicator {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #c71585;
+  text-shadow: 0 0 8px rgba(255, 182, 193, 0.7);
+}
+
 /* Night mode message */
 .night-mode-msg {
   position: absolute;

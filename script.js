@@ -865,8 +865,8 @@ function removeHeart(heart, caught) {
     if (heart.isBrokenHeart) return;
     if (isHeartRainActive()) return;
     if (Date.now() < loveBoostEndTime) return;
-    // Only count a miss when this was basically the only heart falling.
-    if (hearts.length > 0) return;
+    // Don't count miss when screen is too busy (rain-like chaos).
+    if (hearts.length > 4) return;
     catchStreak = 0;
     lives++;
     livesEl.textContent = lives;

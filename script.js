@@ -35,7 +35,6 @@ let audioInitialized = false;
 let isMuted = false;
 let slowMotionEndTime = 0;
 let zainabSkyEventShown = false;
-let luckyHeartShownThisGame = false;
 let magnetEndTime = 0;
 let skyFillShownThisGame = false;
 let windEndTime = 0;
@@ -55,8 +54,6 @@ const CONSECUTIVE_MISSES_FOR_BONUS = 3;
 const BONUS_SPAWN_REMAINING_COUNT = 6;
 const SKY_FILL_SCORE = 3000;
 const SKY_FILL_RAIN_MS = 2000;
-const LUCKY_HEART_SCORE = 700;
-const LUCKY_HEART_POINTS = 250;
 const ZAINAB_SKY_SCORE = 1500;
 const ZAINAB_HEART_CHANCE = 1 / 100;
 const MYSTERY_HEART_CHANCE = 1 / 25;
@@ -292,10 +289,6 @@ function checkScoreMilestones() {
   if (!zainabSkyEventShown && score >= ZAINAB_SKY_SCORE) {
     zainabSkyEventShown = true;
     triggerZainabSkyEvent();
-  }
-  if (!luckyHeartShownThisGame && score >= LUCKY_HEART_SCORE) {
-    luckyHeartShownThisGame = true;
-    spawnLuckyHeart();
   }
   if (!secret4000Shown && score >= SECRET_UNLOCK_SCORE) {
     secret4000Shown = true;
@@ -878,34 +871,9 @@ function spawnGlitterHeart() {
   });
 }
 
-function spawnLuckyHeart() {
-  if (!gameRunning) return;
-  if (isHeartRainActive()) {
-    setTimeout(spawnLuckyHeart, 600);
-    return;
-  }
-  const heart = document.createElement('div');
-  heart.className = 'heart lucky-heart';
-  heart.innerHTML = '🍀💖';
-  heart.title = 'Lucky!';
-  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
-  heart.style.left = x + '%';
-  heartsContainer.appendChild(heart);
-  const speed = getCurrentSpeed() * 0.9;
-  hearts.push({
-    element: heart,
-    x: x,
-    y: 0,
-    speed: speed + Math.random() * 0.3,
-    message: null,
-    isGolden: false,
-    isLuckyHeart: true
-  });
-}
-
 function isNormalHeart(heart) {
   return !heart.isRainHeart && !heart.isBrokenHeart && !heart.isZainabHeart &&
-    !heart.isMysteryHeart && !heart.isBrownHeart && !heart.isLuckyHeart &&
+    !heart.isMysteryHeart && !heart.isBrownHeart &&
     !heart.isMagnetHeart && !heart.isGlitterHeart && !heart.isShieldHeart;
 }
 
@@ -1213,18 +1181,6 @@ function onHeartTapped(heartObj) {
     removeHeart(heartObj, true);
     return;
   }
-  if (heartObj.isLuckyHeart) {
-    addScore(LUCKY_HEART_POINTS);
-    if (score > getBestScore()) {
-      setBestScore(score);
-      updateBestScoreDisplay();
-    }
-    showFloatingMessage('🍀 Lucky Catch!');
-    showComboSparkle();
-    playSfx(sfxGoldenEl);
-    removeHeart(heartObj, true);
-    return;
-  }
   if (heartObj.isMagnetHeart) {
     addScore(TAP_POINTS);
     magnetEndTime = Date.now() + MAGNET_DURATION_MS;
@@ -1318,21 +1274,9 @@ function gameLoop() {
     heart.y += heart.speed * slowMult;
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCloseCatch(heart)) {
-      // Treat special hearts correctly even on near-miss saves.
-      if (heart.isLuckyHeart) {
-        addScore(LUCKY_HEART_POINTS);
-        if (score > getBestScore()) {
-          setBestScore(score);
-          updateBestScoreDisplay();
-        }
-        showFloatingMessage('🍀 Lucky Catch!');
-        showComboSparkle();
-        playSfx(sfxGoldenEl);
-      } else {
-        addScore(POINTS_PER_HEART);
-        showFloatingMessage('💖 Close Catch!');
-        playSfx(sfxCatchEl);
-      }
+      addScore(POINTS_PER_HEART);
+      showFloatingMessage('💖 Close Catch!');
+      playSfx(sfxCatchEl);
       hapticCatch();
       removeHeart(heart, true);
       continue;
@@ -1359,18 +1303,6 @@ function gameLoop() {
         showFloatingMessage('🤎 Bonus Heart! +100 Points');
         const rect = heart.element.getBoundingClientRect();
         playBrownBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
-        showComboSparkle();
-        playSfx(sfxGoldenEl);
-        removeHeart(heart, true);
-        continue;
-      }
-      if (heart.isLuckyHeart) {
-        addScore(LUCKY_HEART_POINTS);
-        if (score > getBestScore()) {
-          setBestScore(score);
-          updateBestScoreDisplay();
-        }
-        showFloatingMessage('🍀 Lucky Catch!');
         showComboSparkle();
         playSfx(sfxGoldenEl);
         removeHeart(heart, true);

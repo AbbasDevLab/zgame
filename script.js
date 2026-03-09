@@ -190,7 +190,7 @@ const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 14;
 const HEART_SPAWN_MAX = 86;
 const HEART_EDGE_MARGIN = 6;
-const MAX_LIVES = 3;
+const MAX_LIVES = 5;
 const POINTS_PER_HEART = 5;
 const TAP_POINTS = 5;
 const GOLDEN_POINTS = 50;
@@ -865,6 +865,8 @@ function removeHeart(heart, caught) {
     if (heart.isBrokenHeart) return;
     if (isHeartRainActive()) return;
     if (Date.now() < loveBoostEndTime) return;
+    // Only count a miss when this was basically the only heart falling.
+    if (hearts.length > 0) return;
     catchStreak = 0;
     lives++;
     livesEl.textContent = lives;

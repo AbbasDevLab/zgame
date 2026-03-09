@@ -1236,14 +1236,22 @@ function gameLoop() {
     heart.y += heart.speed * slowMult;
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCloseCatch(heart)) {
-      addScore(POINTS_PER_HEART);
-      showFloatingMessage('💖 Close Catch!');
-      hapticCatch();
-      playSfx(sfxCatchEl);
-      if (score > getBestScore()) {
-        setBestScore(score);
-        updateBestScoreDisplay();
+      // Treat special hearts correctly even on near-miss saves.
+      if (heart.isLuckyHeart) {
+        addScore(LUCKY_HEART_POINTS);
+        if (score > getBestScore()) {
+          setBestScore(score);
+          updateBestScoreDisplay();
+        }
+        showFloatingMessage('🍀 Lucky Catch!');
+        showComboSparkle();
+        playSfx(sfxGoldenEl);
+      } else {
+        addScore(POINTS_PER_HEART);
+        showFloatingMessage('💖 Close Catch!');
+        playSfx(sfxCatchEl);
       }
+      hapticCatch();
       removeHeart(heart, true);
       continue;
     }

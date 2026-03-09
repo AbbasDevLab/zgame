@@ -471,8 +471,9 @@ function playBrownBurst(clientX, clientY) {
 }
 
 function updateBasketPosition() {
-  const maxX = 100 - BASKET_WIDTH;
-  basketX = Math.max(0, Math.min(maxX, basketX));
+  // basketX is the basket's CENTER in percent (CSS uses translateX(-50%))
+  // Allow it to reach the edges (half the basket can go off-screen).
+  basketX = Math.max(0, Math.min(100, basketX));
   basket.style.left = basketX + '%';
 }
 
@@ -860,6 +861,7 @@ function removeHeart(heart, caught) {
   heart.element.remove();
   if (!caught) {
     if (heart.isRainHeart) return;
+    if (heart.isBrokenHeart) return;
     if (isHeartRainActive()) return;
     if (Date.now() < loveBoostEndTime) return;
     catchStreak = 0;
@@ -1426,7 +1428,7 @@ gameArea.addEventListener('mousemove', (e) => {
   lastInteractionTime = Date.now();
   const rect = gameArea.getBoundingClientRect();
   const x = ((e.clientX - rect.left) / rect.width) * 100;
-  basketX = x - BASKET_WIDTH / 2;
+  basketX = x;
   updateBasketPosition();
 });
 
@@ -1437,7 +1439,7 @@ gameArea.addEventListener('touchmove', (e) => {
     lastInteractionTime = Date.now();
     const rect = gameArea.getBoundingClientRect();
     const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
-    basketX = x - BASKET_WIDTH / 2;
+    basketX = x;
     updateBasketPosition();
   }
 }, { passive: false });

@@ -41,8 +41,16 @@ let skyFillShownThisGame = false;
 let windEndTime = 0;
 let windDirection = 1;
 let lastWindCheckTime = 0;
+let pendingMisses = [];
+let consecutiveMisses = 0;
+let bonusHeartSpawnRemaining = 0;
 
 const SECRET_SCORE = 600;
+const MISS_GRACE_MS = 350;
+const CLOSE_CATCH_PX = 10;
+const MAX_HEARTS_FOR_MISS = 5;
+const CONSECUTIVE_MISSES_FOR_BONUS = 3;
+const BONUS_SPAWN_REMAINING_COUNT = 6;
 const SKY_FILL_SCORE = 3000;
 const SKY_FILL_RAIN_MS = 2000;
 const LUCKY_HEART_SCORE = 700;
@@ -190,7 +198,7 @@ const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 14;
 const HEART_SPAWN_MAX = 86;
 const HEART_EDGE_MARGIN = 6;
-const MAX_LIVES = 5;
+const MAX_LIVES = 3;
 const POINTS_PER_HEART = 5;
 const TAP_POINTS = 5;
 const GOLDEN_POINTS = 50;
@@ -483,6 +491,16 @@ function isHeartRainActive() {
 
 function spawnHeart() {
   if (!gameRunning) return;
+  if (bonusHeartSpawnRemaining > 0 && !isHeartRainActive()) {
+    bonusHeartSpawnRemaining--;
+    if (Math.random() < 0.5) {
+      bonusHeartSpawnRemaining = 0;
+      consecutiveMisses = 0;
+      if (Math.random() < 0.5) spawnMysteryHeart();
+      else spawnBrownHeart();
+      return;
+    }
+  }
   const isZainab = !isHeartRainActive() && Math.random() < ZAINAB_HEART_CHANCE;
   if (isZainab) {
     spawnZainabHeart();
@@ -827,6 +845,12 @@ function spawnLuckyHeart() {
   });
 }
 
+function isNormalHeart(heart) {
+  return !heart.isRainHeart && !heart.isBrokenHeart && !heart.isZainabHeart &&
+    !heart.isMysteryHeart && !heart.isBrownHeart && !heart.isLuckyHeart &&
+    !heart.isMagnetHeart && !heart.isGlitterHeart;
+}
+
 function checkCollision(heart) {
   const heartRect = heart.element.getBoundingClientRect();
   const basketRect = basket.getBoundingClientRect();
@@ -844,6 +868,20 @@ function checkCollision(heart) {
   return false;
 }
 
+function checkCloseCatch(heart) {
+  if (gameMode !== 'basket' || heart.isBrokenHeart) return false;
+  const heartRect = heart.element.getBoundingClientRect();
+  const basketRect = basket.getBoundingClientRect();
+  const heartCenterX = (heartRect.left + heartRect.right) / 2;
+  const heartBottom = heartRect.bottom;
+  const basketTop = basketRect.top;
+  const basketLeft = basketRect.left;
+  const basketRight = basketRect.right;
+  if (heartBottom < basketTop - 18 || heartBottom > basketTop + 36) return false;
+  const distOutside = Math.max(0, basketLeft - heartCenterX, heartCenterX - basketRight);
+  return distOutside > 0 && distOutside <= CLOSE_CATCH_PX;
+}
+
 function addScore(pts) {
   const mult = (Date.now() < loveBoostEndTime) ? 2 : 1;
   score += pts * mult;
@@ -852,27 +890,48 @@ function addScore(pts) {
   checkScoreMilestones();
 }
 
-function removeHeart(heart, caught) {
+function schedulePossibleMiss(heart) {
   const idx = hearts.indexOf(heart);
   if (idx > -1) hearts.splice(idx, 1);
-  if (caught) {
-    const rect = heart.element.getBoundingClientRect();
-    playCatchBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
-  }
   heart.element.remove();
-  if (!caught) {
-    if (heart.isRainHeart) return;
-    if (heart.isBrokenHeart) return;
-    if (isHeartRainActive()) return;
-    if (Date.now() < loveBoostEndTime) return;
-    // Don't count miss when screen is too busy (rain-like chaos).
-    if (hearts.length > 4) return;
+  pendingMisses.push({
+    isRainHeart: heart.isRainHeart,
+    isBrokenHeart: heart.isBrokenHeart,
+    isNormal: isNormalHeart(heart),
+    timestamp: Date.now()
+  });
+}
+
+function processPendingMisses() {
+  const now = Date.now();
+  for (let i = pendingMisses.length - 1; i >= 0; i--) {
+    const p = pendingMisses[i];
+    if (now - p.timestamp < MISS_GRACE_MS) continue;
+    pendingMisses.splice(i, 1);
+    if (!p.isNormal || p.isRainHeart || p.isBrokenHeart) continue;
+    if (isHeartRainActive() || Date.now() < loveBoostEndTime) continue;
+    if (hearts.length > MAX_HEARTS_FOR_MISS) continue;
     catchStreak = 0;
+    consecutiveMisses++;
     lives++;
     livesEl.textContent = lives;
     if (lives >= MAX_LIVES - 1) livesDisplay.classList.add('warning');
     if (lives >= MAX_LIVES) endGame();
+    if (consecutiveMisses >= CONSECUTIVE_MISSES_FOR_BONUS) {
+      bonusHeartSpawnRemaining = BONUS_SPAWN_REMAINING_COUNT;
+    }
   }
+}
+
+function removeHeart(heart, caught) {
+  const idx = hearts.indexOf(heart);
+  if (idx > -1) hearts.splice(idx, 1);
+  if (caught) {
+    consecutiveMisses = 0;
+    const rect = heart.element.getBoundingClientRect();
+    playCatchBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+  heart.element.remove();
 }
 
 function showComboSparkle() {
@@ -1153,6 +1212,7 @@ function gameLoop() {
     lastWindCheckTime = now;
     if (Math.random() < WIND_CHANCE) startWind();
   }
+  processPendingMisses();
   const slowMult = now < slowMotionEndTime ? 0.5 : 1;
   const magnetPull = gameMode === 'basket' && isMagnetActive();
   const windActive = isWindActive();
@@ -1175,6 +1235,18 @@ function gameLoop() {
     }
     heart.y += heart.speed * slowMult;
     heart.element.style.top = heart.y + 'px';
+    if (gameMode === 'basket' && checkCloseCatch(heart)) {
+      addScore(POINTS_PER_HEART);
+      showFloatingMessage('💖 Close Catch!');
+      hapticCatch();
+      playSfx(sfxCatchEl);
+      if (score > getBestScore()) {
+        setBestScore(score);
+        updateBestScoreDisplay();
+      }
+      removeHeart(heart, true);
+      continue;
+    }
     if (gameMode === 'basket' && checkCollision(heart)) {
       catchStreak++;
       if (heart.isZainabHeart) {
@@ -1280,8 +1352,7 @@ function gameLoop() {
       continue;
     }
     if (heart.y > rect.height) {
-      if (!heart.isRainHeart) removeHeart(heart, false);
-      else removeHeart(heart, false);
+      schedulePossibleMiss(heart);
     }
   }
   gameLoopId = requestAnimationFrame(gameLoop);
@@ -1315,6 +1386,9 @@ function startGame(mode) {
   magnetEndTime = 0;
   windEndTime = 0;
   lastWindCheckTime = 0;
+  pendingMisses = [];
+  consecutiveMisses = 0;
+  bonusHeartSpawnRemaining = 0;
   slowMotionEndTime = 0;
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);

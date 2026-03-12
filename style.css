@@ -600,16 +600,17 @@ body.night-mode .start-heart {
 
 .birthday-banner {
   position: absolute;
-  top: 16px;
+  top: 60px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 6px 14px;
+  padding: 4px 10px;
   background: rgba(255, 255, 255, 0.96);
   border-radius: 999px;
   box-shadow: 0 4px 16px rgba(199, 21, 133, 0.25);
-  font-size: clamp(0.85rem, 2.1vw, 1rem);
+  font-size: clamp(0.7rem, 1.8vw, 0.9rem);
   color: #c71585;
   text-align: center;
+  white-space: nowrap;
   z-index: 14;
 }
 

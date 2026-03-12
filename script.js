@@ -49,6 +49,7 @@ let birthdayFireworksScoreShown = false;
 let birthdaySecretShownThisGame = false;
 let birthdayFirstCatchShown = false;
 let birthdayStartShownThisSession = false;
+let lastEmptyHeartsTime = 0;
 
 const SECRET_SCORE = 600;
 const MISS_GRACE_MS = 350;
@@ -334,11 +335,7 @@ function checkScoreMilestones() {
     secret4000Shown = true;
     enqueueAchievement('secret-4000');
   }
-  if (!skyFillShownThisGame && score >= SKY_FILL_SCORE) {
-    skyFillShownThisGame = true;
-    showFloatingMessage("You've collected enough hearts to fill the sky.");
-    setTimeout(() => startHeartRain(SKY_FILL_RAIN_MS), 1500);
-  }
+  // Sky fill/extra heart rain disabled above 3000 to keep late-game flow simple
   if (birthdayMode && !birthdayFireworksScoreShown && score >= BIRTHDAY_FIREWORKS_SCORE) {
     birthdayFireworksScoreShown = true;
     showFloatingMessage('🎆 Birthday Celebration!');
@@ -352,7 +349,7 @@ function checkScoreMilestones() {
   }
   if (score >= HEART_RAIN_RANDOM_SCORE && !isHeartRainActive()) {
     const now = Date.now();
-    if (now - lastRandomHeartRainTime > HEART_RAIN_RANDOM_COOLDOWN_MS && Math.random() < 0.02) {
+    if (score < 3000 && now - lastRandomHeartRainTime > HEART_RAIN_RANDOM_COOLDOWN_MS && Math.random() < 0.02) {
       lastRandomHeartRainTime = now;
       startHeartRain();
     }
@@ -626,15 +623,15 @@ function spawnHeart() {
     isGolden: isGolden,
     isBalloonHeart: isBalloon,
     balloonPhase: isBalloon ? 'up' : null,
-    lateCurve: Math.random() < LATE_CURVE_CHANCE,
+    lateCurve: score < 3000 && Math.random() < LATE_CURVE_CHANCE,
     lateCurveDir: Math.random() < 0.5 ? -1 : 1
   };
-  if (!isBalloon && Math.random() < DELAYED_HEART_CHANCE) {
+  if (!isBalloon && score < 3000 && Math.random() < DELAYED_HEART_CHANCE) {
     obj.delayedHeart = true;
     obj.delayEndTime = Date.now() + 650 + Math.random() * 500; // ~0.65–1.15s pause
     obj.delayBoosted = false;
   }
-  if (!isBalloon && Math.random() < FAKE_DIRECTION_CHANCE) {
+  if (!isBalloon && score < 3000 && Math.random() < FAKE_DIRECTION_CHANCE) {
     obj.fakeDirHeart = true;
     obj.fakeDirDir = Math.random() < 0.5 ? -1 : 1;
     obj.fakeDirSwitched = false;
@@ -1671,6 +1668,20 @@ function gameLoop() {
       schedulePossibleMiss(heart);
     }
   }
+
+  // Watchdog: if no hearts for a while, force a spawn to keep flow
+  if (!isHeartRainActive() && gameRunning) {
+    if (hearts.length === 0) {
+      if (!lastEmptyHeartsTime) lastEmptyHeartsTime = now;
+      if (now - lastEmptyHeartsTime > 2200) {
+        spawnHeart();
+        lastEmptyHeartsTime = now;
+      }
+    } else {
+      lastEmptyHeartsTime = 0;
+    }
+  }
+
   gameLoopId = requestAnimationFrame(gameLoop);
 }
 

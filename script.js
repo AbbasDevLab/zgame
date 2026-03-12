@@ -1772,6 +1772,7 @@ function applyBirthdayUi() {
   }
   if (birthdayBanner) {
     birthdayBanner.classList.remove('hidden');
+    setTimeout(() => birthdayBanner.classList.add('hidden'), 5000);
   }
 }
 

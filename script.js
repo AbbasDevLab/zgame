@@ -113,6 +113,10 @@ const BIRTHDAY_GIFT_HEART_CHANCE = 1 / 28;
 const BIRTHDAY_CAKE_HEART_CHANCE = 1 / 30;
 const BIRTHDAY_BALLOON_HEART_CHANCE = 0.18;
 
+// Late curve hearts
+const LATE_CURVE_CHANCE = 0.22;
+const DELAYED_HEART_CHANCE = 0.14;
+
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
 
@@ -628,8 +632,15 @@ function spawnHeart() {
     message: heart.dataset.message || null,
     isGolden: isGolden,
     isBalloonHeart: isBalloon,
-    balloonPhase: isBalloon ? 'up' : null
+    balloonPhase: isBalloon ? 'up' : null,
+    lateCurve: Math.random() < LATE_CURVE_CHANCE,
+    lateCurveDir: Math.random() < 0.5 ? -1 : 1
   };
+  if (!isBalloon && Math.random() < DELAYED_HEART_CHANCE) {
+    obj.delayedHeart = true;
+    obj.delayEndTime = Date.now() + 650 + Math.random() * 500; // ~0.65–1.15s pause
+    obj.delayBoosted = false;
+  }
   if (useWobble) {
     obj.wobble = true;
     obj.baseX = x;
@@ -1480,6 +1491,7 @@ function gameLoop() {
   const windActive = isWindActive();
   for (let i = hearts.length - 1; i >= 0; i--) {
     const heart = hearts[i];
+    const holding = heart.delayedHeart && now < heart.delayEndTime;
     if (magnetPull && !heart.isMagnetHeart) {
       const dx = basketX - heart.x;
       heart.x += dx * 0.07;
@@ -1495,11 +1507,27 @@ function gameLoop() {
       heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
       heart.element.style.left = heart.x + '%';
     }
-    if (heart.isBalloonHeart && heart.balloonPhase === 'up') {
-      heart.y -= heart.speed * slowMult * 0.4;
-      if (heart.y <= 20) heart.balloonPhase = 'down';
-    } else {
-      heart.y += heart.speed * slowMult;
+    if (!holding) {
+      if (heart.delayedHeart && !heart.delayBoosted) {
+        heart.delayBoosted = true;
+        heart.speed *= 1.8; // fast drop after pause
+      }
+      if (heart.isBalloonHeart && heart.balloonPhase === 'up') {
+        heart.y -= heart.speed * slowMult * 0.4;
+        if (heart.y <= 20) heart.balloonPhase = 'down';
+      } else {
+        heart.y += heart.speed * slowMult;
+      }
+    }
+    // Late curve: gentle side drift near bottom
+    if (heart.lateCurve) {
+      const threshold = rect.height * 0.7;
+      if (heart.y > threshold) {
+        const t = Math.min(1, (heart.y - threshold) / (rect.height * 0.25));
+        heart.x += heart.lateCurveDir * 0.5 * slowMult * t;
+        heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
+        heart.element.style.left = heart.x + '%';
+      }
     }
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCloseCatch(heart)) {

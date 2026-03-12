@@ -45,6 +45,10 @@ let consecutiveMisses = 0;
 let bonusHeartSpawnRemaining = 0;
 let shieldCharges = 0;
 let currentComboMultiplier = 1;
+let birthdayFireworksScoreShown = false;
+let birthdaySecretShownThisGame = false;
+let birthdayFirstCatchShown = false;
+let birthdayStartShownThisSession = false;
 
 const SECRET_SCORE = 600;
 const MISS_GRACE_MS = 350;
@@ -101,6 +105,13 @@ const TEASER_SCORE = 1500;
 const SECRET_UNLOCK_SCORE = 4000;
 const HEART_RAIN_RANDOM_SCORE = 3200;
 const HEART_RAIN_RANDOM_COOLDOWN_MS = 70000;
+
+// Birthday mode
+const BIRTHDAY_FIREWORKS_SCORE = 2000;
+const BIRTHDAY_SECRET_SCORE = 3000;
+const BIRTHDAY_GIFT_HEART_CHANCE = 1 / 28;
+const BIRTHDAY_CAKE_HEART_CHANCE = 1 / 30;
+const BIRTHDAY_BALLOON_HEART_CHANCE = 0.18;
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -195,6 +206,14 @@ const sfxGoldenEl = document.getElementById('sfx-golden');
 const sfxComboEl = document.getElementById('sfx-combo');
 const sfxHeartRainEl = document.getElementById('sfx-heart-rain');
 const bgMusicEl = document.getElementById('bg-music');
+const birthdayBanner = document.getElementById('birthday-banner');
+const birthdayConfettiEl = document.getElementById('birthday-confetti');
+const birthdayFireworksLayer = document.getElementById('birthday-fireworks-layer');
+const birthdayStartOverlay = document.getElementById('birthday-start-overlay');
+const birthdayStartContinueBtn = document.getElementById('birthday-start-continue-btn');
+const birthdaySecretOverlay = document.getElementById('birthday-secret-overlay');
+const birthdaySecretContinueBtn = document.getElementById('birthday-secret-continue-btn');
+const introMessageEl = document.getElementById('intro-message');
 
 const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 14;
@@ -229,6 +248,22 @@ const TAGLINES = [
 ];
 const EASTER_EGG_MESSAGE = "You found it! Made with so much love for you, Zainab. — Haider 💕";
 const EASTER_EGG_TAPS = 5;
+
+function isBirthdayWeek() {
+  const now = new Date();
+  const month = now.getMonth(); // 0 = Jan
+  const day = now.getDate();
+  // Enable from March 1–17 (inclusive)
+  return month === 2 && day <= 17;
+}
+
+function isBirthdayToday() {
+  const now = new Date();
+  return now.getMonth() === 2 && now.getDate() === 17;
+}
+
+const birthdayMode = isBirthdayWeek();
+const birthdayToday = isBirthdayToday();
 
 function getLevelIndexForScore(s) {
   if (s < LEVELS[1].min) return 0;
@@ -298,6 +333,17 @@ function checkScoreMilestones() {
     skyFillShownThisGame = true;
     showFloatingMessage("You've collected enough hearts to fill the sky.");
     setTimeout(() => startHeartRain(SKY_FILL_RAIN_MS), 1500);
+  }
+  if (birthdayMode && !birthdayFireworksScoreShown && score >= BIRTHDAY_FIREWORKS_SCORE) {
+    birthdayFireworksScoreShown = true;
+    showFloatingMessage('🎆 Birthday Celebration!');
+    startBirthdayFireworks(3000);
+  }
+  if (birthdayMode && !birthdaySecretShownThisGame && score >= BIRTHDAY_SECRET_SCORE) {
+    birthdaySecretShownThisGame = true;
+    pauseGame();
+    markAchievementShown();
+    if (birthdaySecretOverlay) birthdaySecretOverlay.classList.remove('hidden');
   }
   if (score >= HEART_RAIN_RANDOM_SCORE && !isHeartRainActive()) {
     const now = Date.now();
@@ -509,6 +555,16 @@ function spawnHeart() {
       return;
     }
   }
+  if (birthdayMode && !isHeartRainActive()) {
+    if (Math.random() < BIRTHDAY_GIFT_HEART_CHANCE) {
+      spawnBirthdayGiftHeart();
+      return;
+    }
+    if (Math.random() < BIRTHDAY_CAKE_HEART_CHANCE) {
+      spawnCakeHeart();
+      return;
+    }
+  }
   const isZainab = !isHeartRainActive() && Math.random() < ZAINAB_HEART_CHANCE;
   if (isZainab) {
     spawnZainabHeart();
@@ -558,13 +614,21 @@ function spawnHeart() {
   heartsContainer.appendChild(heart);
   const speed = getCurrentSpeed();
   const useWobble = score >= ZIGZAG_MIN_SCORE && Math.random() < ZIGZAG_CHANCE;
+  const isBalloon = birthdayMode && Math.random() < BIRTHDAY_BALLOON_HEART_CHANCE;
+  const startY = isBalloon ? 60 : 0;
+  if (isBalloon) {
+    heart.classList.add('balloon-heart');
+    heart.style.top = startY + 'px';
+  }
   const obj = {
     element: heart,
     x: x,
-    y: 0,
+    y: startY,
     speed: speed + Math.random() * 0.35,
     message: heart.dataset.message || null,
-    isGolden: isGolden
+    isGolden: isGolden,
+    isBalloonHeart: isBalloon,
+    balloonPhase: isBalloon ? 'up' : null
   };
   if (useWobble) {
     obj.wobble = true;
@@ -621,6 +685,48 @@ function spawnMysteryHeart() {
     message: null,
     isGolden: false,
     isMysteryHeart: true
+  });
+}
+
+function spawnBirthdayGiftHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart birthday-gift-heart';
+  heart.innerHTML = '🎁';
+  heart.title = 'Birthday Surprise!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x,
+    y: 0,
+    speed: speed + Math.random() * 0.35,
+    message: null,
+    isGolden: false,
+    isBirthdayGiftHeart: true
+  });
+}
+
+function spawnCakeHeart() {
+  if (!gameRunning) return;
+  const heart = document.createElement('div');
+  heart.className = 'heart cake-heart';
+  heart.innerHTML = '🎂';
+  heart.title = 'Birthday Cake!';
+  const x = HEART_SPAWN_MIN + Math.random() * (HEART_SPAWN_MAX - HEART_SPAWN_MIN);
+  heart.style.left = x + '%';
+  heartsContainer.appendChild(heart);
+  const speed = getCurrentSpeed();
+  hearts.push({
+    element: heart,
+    x,
+    y: 0,
+    speed: speed * 0.9,
+    message: null,
+    isGolden: false,
+    isCakeHeart: true
   });
 }
 
@@ -772,6 +878,49 @@ function applyMysteryEffect() {
   showComboSparkle();
 }
 
+function applyBirthdayGiftReward(heartObj) {
+  showFloatingMessage('🎁 Birthday Surprise!');
+  const roll = Math.floor(Math.random() * 4);
+  if (roll === 0) {
+    addScore(200);
+    showFloatingMessage('🎁 Birthday Surprise! +200 points');
+  } else if (roll === 1) {
+    startHeartRain();
+    showFloatingMessage('💖 Heart storm!');
+    playSfx(sfxHeartRainEl);
+  } else if (roll === 2) {
+    magnetEndTime = Date.now() + MAGNET_DURATION_MS;
+    showFloatingMessage('🧲 Birthday Magnet Mode!');
+    if (magnetIndicator) {
+      magnetIndicator.classList.remove('hidden');
+      setTimeout(() => magnetIndicator.classList.add('hidden'), MAGNET_DURATION_MS);
+    }
+  } else {
+    startBirthdayFireworks(2800);
+    showFloatingMessage('🎆 Birthday Fireworks!');
+  }
+  showComboSparkle();
+}
+
+function playCakeBurst(clientX, clientY) {
+  catchBurstEl.innerHTML = '';
+  catchBurstEl.classList.remove('hidden');
+  const symbols = ['🕯️', '💖', '✨'];
+  for (let i = 0; i < 9; i++) {
+    const s = document.createElement('span');
+    s.className = 'burst-piece';
+    s.textContent = symbols[i % symbols.length];
+    s.style.setProperty('--angle', (i * 40) + 'deg');
+    catchBurstEl.appendChild(s);
+  }
+  catchBurstEl.style.left = clientX + 'px';
+  catchBurstEl.style.top = clientY + 'px';
+  setTimeout(() => {
+    catchBurstEl.classList.add('hidden');
+    catchBurstEl.innerHTML = '';
+  }, 650);
+}
+
 function spawnRainHeart() {
   if (!gameRunning || !isHeartRainActive()) return;
   const heart = document.createElement('div');
@@ -821,6 +970,59 @@ function startHeartRain(durationMs) {
     }
     spawnRainHeart();
   }, HEART_RAIN_SPAWN_MS);
+}
+
+function startBirthdayConfetti() {
+  if (!birthdayConfettiEl) return;
+  birthdayConfettiEl.innerHTML = '';
+  birthdayConfettiEl.classList.remove('hidden');
+  const symbols = ['❤️', '💕', '💖', '💗'];
+  const count = 40;
+  for (let i = 0; i < count; i++) {
+    const h = document.createElement('span');
+    h.className = 'birthday-confetti-heart';
+    h.textContent = symbols[i % symbols.length];
+    h.style.left = Math.random() * 100 + '%';
+    h.style.animationDelay = (Math.random() * 0.8) + 's';
+    birthdayConfettiEl.appendChild(h);
+  }
+  setTimeout(() => {
+    birthdayConfettiEl.classList.add('hidden');
+    birthdayConfettiEl.innerHTML = '';
+  }, 3600);
+}
+
+function startBirthdayFireworks(durationMs) {
+  if (!birthdayFireworksLayer) return;
+  const duration = durationMs || 3000;
+  birthdayFireworksLayer.classList.remove('hidden');
+  birthdayFireworksLayer.innerHTML = '';
+  const symbols = ['💖', '💕', '💜', '💙', '💛', '✨'];
+  const start = Date.now();
+  function spawn() {
+    const now = Date.now();
+    if (now - start > duration) {
+      birthdayFireworksLayer.classList.add('hidden');
+      birthdayFireworksLayer.innerHTML = '';
+      return;
+    }
+    const s = document.createElement('span');
+    s.className = 'birthday-firework';
+    s.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = (20 + Math.random() * 60) + '%';
+    s.style.animationDuration = (0.9 + Math.random() * 0.7) + 's';
+    birthdayFireworksLayer.appendChild(s);
+    setTimeout(() => s.remove(), 1800);
+    setTimeout(spawn, 150);
+  }
+  spawn();
+}
+
+function maybeShowFirstBirthdayCatch() {
+  if (!birthdayToday || birthdayFirstCatchShown) return;
+  birthdayFirstCatchShown = true;
+  showFloatingMessage('💖 First heart of your birthday.');
 }
 
 function showZainabHeartFound() {
@@ -1149,6 +1351,13 @@ function resumeAfterSecretEnding() {
   resumeGame();
 }
 
+function resumeAfterBirthdaySecret() {
+  if (birthdaySecretOverlay) birthdaySecretOverlay.classList.add('hidden');
+  achievementShowing = false;
+  startHeartRain(5000);
+  resumeGame();
+}
+
 function resumeGame() {
   gameRunning = true;
   if (!isHeartRainActive()) {
@@ -1159,6 +1368,7 @@ function resumeGame() {
 
 function onHeartTapped(heartObj) {
   lastInteractionTime = Date.now();
+  maybeShowFirstBirthdayCatch();
   if (heartObj.isZainabHeart) {
     showZainabHeartFound();
     removeHeart(heartObj, true);
@@ -1167,6 +1377,20 @@ function onHeartTapped(heartObj) {
   if (heartObj.isRainHeart) {
     addScore(HEART_RAIN_POINTS);
     playSfx(sfxHeartRainEl);
+    removeHeart(heartObj, true);
+    return;
+  }
+  if (heartObj.isBirthdayGiftHeart) {
+    applyBirthdayGiftReward(heartObj);
+    removeHeart(heartObj, true);
+    return;
+  }
+  if (heartObj.isCakeHeart) {
+    addScore(300);
+    showFloatingMessage('🎂 Birthday Cake! +300');
+    const rect = heartObj.element.getBoundingClientRect();
+    playCakeBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    playSfx(sfxGoldenEl);
     removeHeart(heartObj, true);
     return;
   }
@@ -1271,7 +1495,12 @@ function gameLoop() {
       heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
       heart.element.style.left = heart.x + '%';
     }
-    heart.y += heart.speed * slowMult;
+    if (heart.isBalloonHeart && heart.balloonPhase === 'up') {
+      heart.y -= heart.speed * slowMult * 0.4;
+      if (heart.y <= 20) heart.balloonPhase = 'down';
+    } else {
+      heart.y += heart.speed * slowMult;
+    }
     heart.element.style.top = heart.y + 'px';
     if (gameMode === 'basket' && checkCloseCatch(heart)) {
       addScore(POINTS_PER_HEART);
@@ -1283,6 +1512,7 @@ function gameLoop() {
     }
     if (gameMode === 'basket' && checkCollision(heart)) {
       catchStreak++;
+      maybeShowFirstBirthdayCatch();
       if (heart.isZainabHeart) {
         showZainabHeartFound();
         removeHeart(heart, true);
@@ -1290,6 +1520,21 @@ function gameLoop() {
       }
       if (heart.isMysteryHeart) {
         applyMysteryEffect();
+        playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isBirthdayGiftHeart) {
+        applyBirthdayGiftReward(heart);
+        playSfx(sfxGoldenEl);
+        removeHeart(heart, true);
+        continue;
+      }
+      if (heart.isCakeHeart) {
+        addScore(300);
+        showFloatingMessage('🎂 Birthday Cake! +300');
+        const r2 = heart.element.getBoundingClientRect();
+        playCakeBurst(r2.left + r2.width / 2, r2.top + r2.height / 2);
         playSfx(sfxGoldenEl);
         removeHeart(heart, true);
         continue;
@@ -1428,6 +1673,9 @@ function startGame(mode) {
   heartRainEndTime = 0;
   if (heartRainInterval) clearInterval(heartRainInterval);
   heartRainInterval = null;
+  birthdayFireworksScoreShown = false;
+  birthdaySecretShownThisGame = false;
+  birthdayFirstCatchShown = false;
   if (secretOverlayEl) secretOverlayEl.classList.add('hidden');
   if (quoteSecretOverlayEl) quoteSecretOverlayEl.classList.add('hidden');
   if (celebration50El) celebration50El.classList.add('hidden');
@@ -1452,9 +1700,16 @@ function startGame(mode) {
   applyNightMode();
   showScreen(gameScreen);
   updateBestScoreDisplay();
-  spawnHeart();
-  spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
-  gameLoopId = requestAnimationFrame(gameLoop);
+  if (birthdayToday && !birthdayStartShownThisSession && birthdayStartOverlay) {
+    birthdayStartShownThisSession = true;
+    gameRunning = false;
+    birthdayStartOverlay.classList.remove('hidden');
+    startBirthdayConfetti();
+  } else {
+    spawnHeart();
+    spawnInterval = setInterval(spawnHeart, SPAWN_RATE_MS);
+    gameLoopId = requestAnimationFrame(gameLoop);
+  }
 }
 
 function isNightMode() {
@@ -1504,6 +1759,23 @@ function fillGameOverHearts() {
 
 fillStartHearts();
 applyNightMode();
+
+function applyBirthdayUi() {
+  if (!birthdayMode) return;
+  const titleElLocal = document.getElementById('game-title');
+  if (titleElLocal) {
+    titleElLocal.textContent = "Zainab\u2019s Birthday Heart Game 🎂";
+  }
+  document.title = "Zainab\u2019s Birthday Heart Game 🎂";
+  if (introMessageEl) {
+    introMessageEl.textContent = "🎉 Birthday Week for Zainab!\nCollect extra love hearts ❤️";
+  }
+  if (birthdayBanner) {
+    birthdayBanner.classList.remove('hidden');
+  }
+}
+
+applyBirthdayUi();
 
 // Easter egg: tap title 5 times
 const titleEl = document.getElementById('game-title');
@@ -1588,6 +1860,11 @@ if (celebration50Btn) celebration50Btn.addEventListener('click', resumeAfterCele
 if (secretEndingBtn) secretEndingBtn.addEventListener('click', resumeAfterSecretEnding);
 if (zainabHeartContinueBtn) zainabHeartContinueBtn.addEventListener('click', resumeAfterZainabHeart);
 if (haider150ContinueBtn) haider150ContinueBtn.addEventListener('click', resumeAfterHaider150);
+if (birthdayStartContinueBtn) birthdayStartContinueBtn.addEventListener('click', () => {
+  if (birthdayStartOverlay) birthdayStartOverlay.classList.add('hidden');
+  resumeGame();
+});
+if (birthdaySecretContinueBtn) birthdaySecretContinueBtn.addEventListener('click', resumeAfterBirthdaySecret);
 
 if (secretMsgBtn) secretMsgBtn.addEventListener('click', () => { if (secretMsgModal) secretMsgModal.classList.remove('hidden'); });
 if (secretMsgClose) secretMsgClose.addEventListener('click', () => { if (secretMsgModal) secretMsgModal.classList.add('hidden'); });

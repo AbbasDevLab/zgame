@@ -598,6 +598,21 @@ body.night-mode .start-heart {
   background: transparent;
 }
 
+.birthday-banner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(199, 21, 133, 0.25);
+  font-size: clamp(0.85rem, 2.1vw, 1rem);
+  color: #c71585;
+  text-align: center;
+  z-index: 14;
+}
+
 .heart {
   position: absolute;
   font-size: 28px;
@@ -712,6 +727,100 @@ body.night-mode .start-heart {
   font-size: 36px;
   animation: wiggle 0.6s ease-in-out infinite, glitterPulse 1.5s ease-in-out infinite;
   filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 16px rgba(255, 105, 180, 0.7));
+}
+
+.heart.birthday-gift-heart {
+  font-size: clamp(30px, 4.8vw, 40px);
+  filter: drop-shadow(0 0 12px rgba(255, 192, 203, 0.9)) drop-shadow(0 0 18px rgba(199, 21, 133, 0.6));
+  animation: glitterPulse 1.4s ease-in-out infinite;
+}
+
+.heart.cake-heart {
+  font-size: clamp(32px, 5vw, 42px);
+  filter: drop-shadow(0 0 12px rgba(255, 182, 193, 0.9)) drop-shadow(0 0 18px rgba(255, 105, 180, 0.7));
+  animation: cakeGlow 1.3s ease-in-out infinite alternate;
+}
+
+@keyframes cakeGlow {
+  0% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.95; }
+}
+
+.heart.balloon-heart {
+  font-size: clamp(26px, 4.1vw, 34px);
+}
+
+.heart.balloon-heart::before {
+  content: '🎈';
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9em;
+}
+
+/* Birthday confetti hearts */
+.birthday-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+  overflow: hidden;
+}
+
+.birthday-confetti-heart {
+  position: absolute;
+  top: -10%;
+  font-size: 1.4rem;
+  opacity: 0.9;
+  animation: birthdayConfettiFall 3.2s linear forwards;
+}
+
+@keyframes birthdayConfettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(120vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Birthday fireworks */
+.birthday-fireworks-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 13;
+  overflow: hidden;
+}
+
+.birthday-firework {
+  position: absolute;
+  font-size: clamp(20px, 4vw, 32px);
+  opacity: 0;
+  animation: birthdayFirework 1.2s ease-out forwards;
+}
+
+@keyframes birthdayFirework {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+.birthday-start-overlay .secret-card {
+  box-shadow: 0 0 40px rgba(255, 182, 193, 0.5);
 }
 
 @keyframes glitterPulse {

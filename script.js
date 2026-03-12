@@ -116,6 +116,7 @@ const BIRTHDAY_BALLOON_HEART_CHANCE = 0.18;
 // Late curve hearts
 const LATE_CURVE_CHANCE = 0.22;
 const DELAYED_HEART_CHANCE = 0.14;
+const FAKE_DIRECTION_CHANCE = 0.16;
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -632,6 +633,11 @@ function spawnHeart() {
     obj.delayedHeart = true;
     obj.delayEndTime = Date.now() + 650 + Math.random() * 500; // ~0.65–1.15s pause
     obj.delayBoosted = false;
+  }
+  if (!isBalloon && Math.random() < FAKE_DIRECTION_CHANCE) {
+    obj.fakeDirHeart = true;
+    obj.fakeDirDir = Math.random() < 0.5 ? -1 : 1;
+    obj.fakeDirSwitched = false;
   }
   if (useWobble) {
     obj.wobble = true;
@@ -1496,6 +1502,18 @@ function gameLoop() {
     }
     if (windActive) {
       heart.x += windDirection * WIND_DRIFT;
+      heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
+      heart.element.style.left = heart.x + '%';
+    }
+    // Fake direction: gentle drift one way, then switch near bottom
+    if (heart.fakeDirHeart) {
+      const switchY = rect.height * 0.7;
+      if (!heart.fakeDirSwitched && heart.y >= switchY) {
+        heart.fakeDirSwitched = true;
+        heart.fakeDirDir *= -1;
+      }
+      const drift = heart.fakeDirSwitched ? 0.7 : 0.4;
+      heart.x += heart.fakeDirDir * drift * slowMult;
       heart.x = Math.max(HEART_EDGE_MARGIN, Math.min(100 - HEART_EDGE_MARGIN, heart.x));
       heart.element.style.left = heart.x + '%';
     }

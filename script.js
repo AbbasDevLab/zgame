@@ -406,20 +406,12 @@ function getSpeedLevel() {
   return Math.min(5, Math.floor(score / SPEED_UP_EVERY_POINTS));
 }
 
-/** 0–500: 1x, 500–1500: 1.1x, 1500–3000: 1.2x, 3000+: 1.3x */
-function getScoreSpeedMultiplier() {
-  if (score >= 3000) return 1.3;
-  if (score >= 1500) return 1.2;
-  if (score >= 500) return 1.1;
-  return 1;
-}
-
 function getCurrentSpeed() {
   const level = getSpeedLevel();
   const extra = (score % SPEED_UP_EVERY_POINTS) / SPEED_UP_EVERY_POINTS;
   const base = BASE_FALL_SPEED + level * 0.6 + extra * 0.6;
   const capped = Math.min(MAX_FALL_SPEED, base);
-  return Math.min(MAX_FALL_SPEED * 1.35, capped * getScoreSpeedMultiplier());
+  return capped;
 }
 
 function showFloatingMessage(text) {

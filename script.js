@@ -450,7 +450,7 @@ function ttResetRound(direction) {
   const h = ttCanvas.height;
   ttBallX = w / 2;
   ttBallY = h / 2;
-  ttBallSpeed = 460;
+  ttBallSpeed = 420;
   const dir = direction || (Math.random() < 0.5 ? -1 : 1);
   const angle = (Math.random() * 0.6 - 0.3);
   ttBallVx = Math.cos(angle) * ttBallSpeed * dir;
@@ -524,15 +524,15 @@ function ttLoop(ts) {
   ttLastTs = ts;
 
   // Layout
-  const paddleW = 14;
-  const paddleH = 92;
-  const pad = 18;
+  const paddleW = Math.max(12, Math.round(w * 0.04));
+  const paddleH = Math.max(90, Math.round(h * 0.16));
+  const pad = Math.max(14, Math.round(w * 0.045));
   const playerX = pad;
   const aiX = w - pad - paddleW;
-  const ballR = 10;
+  const ballR = Math.max(9, Math.round(w * 0.022));
 
   // Player paddle follow (smooth)
-  const playerSpeed = 1200;
+  const playerSpeed = 1250;
   const pyTarget = ttClamp(ttTargetPlayerY - paddleH / 2, 0, h - paddleH);
   const py = ttClamp(ttPlayerY - paddleH / 2, 0, h - paddleH);
   const pyNew = py + (pyTarget - py) * (1 - Math.pow(0.0007, dt * playerSpeed));
@@ -543,7 +543,7 @@ function ttLoop(ts) {
   const aiMaxSpeed = 520;
   const aiReaction = 0.10;
   let aiAimY = ttBallY;
-  if (now < ttAiMissBiasUntil) aiAimY += 90; // intentional miss window
+  if (now < ttAiMissBiasUntil) aiAimY += 120; // intentional miss window
   const aiErr = (Math.random() - 0.5) * 12;
   aiAimY += aiErr;
   const aiTarget = ttClamp(aiAimY, paddleH / 2, h - paddleH / 2);
@@ -579,7 +579,7 @@ function ttLoop(ts) {
     const offset = (ttBallY - pyCenter) / (paddleH / 2);
     const maxAngle = 0.95;
     const ang = offset * maxAngle;
-    ttBallSpeed = Math.min(920, ttBallSpeed * 1.04);
+    ttBallSpeed = Math.min(980, ttBallSpeed * 1.04);
     const dir = isLeft ? 1 : -1;
     ttBallVx = Math.cos(ang) * ttBallSpeed * dir;
     ttBallVy = Math.sin(ang) * ttBallSpeed;
@@ -618,8 +618,9 @@ function ttLoop(ts) {
   ctx.globalAlpha = 0.08;
   ctx.fillStyle = '#c71585';
   for (let i = 0; i < 10; i++) {
-    ctx.font = '28px Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji';
-    ctx.fillText('💖', (i * 80 + 30) % w, (i * 45 + 40) % h);
+    const sz = Math.max(22, Math.round(w * 0.08));
+    ctx.font = `${sz}px Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji`;
+    ctx.fillText('💖', (i * (w * 0.32) + w * 0.12) % w, (i * (h * 0.12) + h * 0.08) % h);
   }
   ctx.globalAlpha = 1;
 
@@ -653,7 +654,8 @@ function ttLoop(ts) {
   ctx.fill(); ctx.stroke();
 
   // Ball (heart)
-  ctx.font = '22px Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji';
+  const ballFont = Math.max(20, Math.round(w * 0.07));
+  ctx.font = `${ballFont}px Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('❤️', ttBallX, ttBallY);

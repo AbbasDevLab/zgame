@@ -432,9 +432,9 @@ let ttRaf = 0;
 let ttLastTs = 0;
 let ttPlayerScore = 0;
 let ttAiScore = 0;
-let ttPlayerY = 0;
-let ttAiY = 0;
-let ttTargetPlayerY = 0;
+let ttPlayerX = 0;
+let ttAiX = 0;
+let ttTargetPlayerX = 0;
 let ttBallX = 0;
 let ttBallY = 0;
 let ttBallVx = 0;
@@ -451,15 +451,15 @@ function ttResetRound(direction) {
   ttBallX = w / 2;
   ttBallY = h / 2;
   ttBallSpeed = 420;
-  const dir = direction || (Math.random() < 0.5 ? -1 : 1);
-  const angle = (Math.random() * 0.6 - 0.3);
-  ttBallVx = Math.cos(angle) * ttBallSpeed * dir;
-  ttBallVy = Math.sin(angle) * ttBallSpeed * (Math.random() < 0.5 ? -1 : 1);
+  const dir = direction || (Math.random() < 0.5 ? -1 : 1); // -1 up, +1 down
+  const angle = (Math.random() * 0.7 - 0.35);
+  ttBallVy = Math.cos(angle) * ttBallSpeed * dir;
+  ttBallVx = Math.sin(angle) * ttBallSpeed * (Math.random() < 0.5 ? -1 : 1);
 }
 
 function ttUpdateScoreUi() {
   if (!ttScoreEl) return;
-  ttScoreEl.textContent = `Zainab ❤️ ${ttPlayerScore}  |  Computer 🤖 ${ttAiScore}`;
+  ttScoreEl.textContent = `Zainab ❤️ ${ttPlayerScore}  |  Haider 🤖 ${ttAiScore}`;
 }
 
 function ttShowResult(winner) {
@@ -495,9 +495,10 @@ function ttStart() {
   ttUpdateScoreUi();
 
   const h = ttCanvas.height;
-  ttPlayerY = h / 2;
-  ttAiY = h / 2;
-  ttTargetPlayerY = h / 2;
+  const w = ttCanvas.width;
+  ttPlayerX = w / 2;
+  ttAiX = w / 2;
+  ttTargetPlayerX = w / 2;
   ttAiMissBiasUntil = 0;
   ttResetRound();
 
@@ -524,88 +525,94 @@ function ttLoop(ts) {
   ttLastTs = ts;
 
   // Layout
-  const paddleW = Math.max(12, Math.round(w * 0.04));
-  const paddleH = Math.max(90, Math.round(h * 0.16));
-  const pad = Math.max(14, Math.round(w * 0.045));
-  const playerX = pad;
-  const aiX = w - pad - paddleW;
+  const paddleH = Math.max(12, Math.round(h * 0.035));     // thickness
+  const paddleW = Math.max(120, Math.round(w * 0.42));     // length
+  const pad = Math.max(16, Math.round(h * 0.035));
+  const playerY = h - pad - paddleH; // bottom
+  const aiY = pad;                   // top
   const ballR = Math.max(9, Math.round(w * 0.022));
 
   // Player paddle follow (smooth)
-  const playerSpeed = 1250;
-  const pyTarget = ttClamp(ttTargetPlayerY - paddleH / 2, 0, h - paddleH);
-  const py = ttClamp(ttPlayerY - paddleH / 2, 0, h - paddleH);
-  const pyNew = py + (pyTarget - py) * (1 - Math.pow(0.0007, dt * playerSpeed));
-  ttPlayerY = ttClamp(pyNew + paddleH / 2, paddleH / 2, h - paddleH / 2);
+  const playerSpeed = 1300;
+  const pxTarget = ttClamp(ttTargetPlayerX - paddleW / 2, 0, w - paddleW);
+  const px = ttClamp(ttPlayerX - paddleW / 2, 0, w - paddleW);
+  const pxNew = px + (pxTarget - px) * (1 - Math.pow(0.0007, dt * playerSpeed));
+  ttPlayerX = ttClamp(pxNew + paddleW / 2, paddleW / 2, w - paddleW / 2);
 
   // AI paddle (slightly imperfect)
   const now = Date.now();
-  const aiMaxSpeed = 520;
-  const aiReaction = 0.10;
-  let aiAimY = ttBallY;
-  if (now < ttAiMissBiasUntil) aiAimY += 120; // intentional miss window
-  const aiErr = (Math.random() - 0.5) * 12;
-  aiAimY += aiErr;
-  const aiTarget = ttClamp(aiAimY, paddleH / 2, h - paddleH / 2);
-  const aiDelta = (aiTarget - ttAiY);
+  const aiMaxSpeed = 700;
+  const aiReaction = 0.11;
+  let aiAimX = ttBallX;
+  if (now < ttAiMissBiasUntil) aiAimX += 130; // intentional miss window
+  const aiErr = (Math.random() - 0.5) * 18;
+  aiAimX += aiErr;
+  const aiTarget = ttClamp(aiAimX, paddleW / 2, w - paddleW / 2);
+  const aiDelta = (aiTarget - ttAiX);
   const aiMove = ttClamp(aiDelta * aiReaction, -aiMaxSpeed * dt, aiMaxSpeed * dt);
-  ttAiY = ttClamp(ttAiY + aiMove, paddleH / 2, h - paddleH / 2);
+  ttAiX = ttClamp(ttAiX + aiMove, paddleW / 2, w - paddleW / 2);
 
   // Ball move
   ttBallX += ttBallVx * dt;
   ttBallY += ttBallVy * dt;
 
-  // Wall bounce
-  if (ttBallY - ballR <= 0) { ttBallY = ballR; ttBallVy *= -1; }
-  if (ttBallY + ballR >= h) { ttBallY = h - ballR; ttBallVy *= -1; }
+  // Wall bounce (left/right)
+  if (ttBallX - ballR <= 0) { ttBallX = ballR; ttBallVx *= -1; }
+  if (ttBallX + ballR >= w) { ttBallX = w - ballR; ttBallVx *= -1; }
 
-  // Paddle collision helper
-  function bounceFromPaddle(px, pyCenter, isLeft) {
-    const pyTop = pyCenter - paddleH / 2;
-    const pyBot = pyCenter + paddleH / 2;
-    if (ttBallY + ballR < pyTop || ttBallY - ballR > pyBot) return false;
-    if (isLeft) {
-      if (ttBallX - ballR > px + paddleW) return false;
-      if (ttBallX - ballR < px && ttBallVx < 0) {
-        ttBallX = px + paddleW + ballR;
+  // Paddle collision helper (top/bottom paddles)
+  function bounceFromPaddle(py, pxCenter, isTop) {
+    const pxLeft = pxCenter - paddleW / 2;
+    const pxRight = pxCenter + paddleW / 2;
+    if (ttBallX + ballR < pxLeft || ttBallX - ballR > pxRight) return false;
+    if (isTop) {
+      // ball moving up, hits top paddle underside
+      if (ttBallY - ballR > py + paddleH) return false;
+      if (ttBallVy < 0 && ttBallY - ballR <= py + paddleH) {
+        ttBallY = py + paddleH + ballR;
+      } else {
+        return false;
       }
     } else {
-      if (ttBallX + ballR < px) return false;
-      if (ttBallX + ballR > px + paddleW && ttBallVx > 0) {
-        ttBallX = px - ballR;
+      // bottom paddle
+      if (ttBallY + ballR < py) return false;
+      if (ttBallVy > 0 && ttBallY + ballR >= py) {
+        ttBallY = py - ballR;
+      } else {
+        return false;
       }
     }
-    // Reflect + add angle based on hit position
-    const offset = (ttBallY - pyCenter) / (paddleH / 2);
-    const maxAngle = 0.95;
+    const offset = (ttBallX - pxCenter) / (paddleW / 2);
+    const maxAngle = 0.85;
     const ang = offset * maxAngle;
     ttBallSpeed = Math.min(980, ttBallSpeed * 1.04);
-    const dir = isLeft ? 1 : -1;
-    ttBallVx = Math.cos(ang) * ttBallSpeed * dir;
-    ttBallVy = Math.sin(ang) * ttBallSpeed;
+    const dir = isTop ? 1 : -1; // after hit: top sends down (+y), bottom sends up (-y)
+    ttBallVy = Math.cos(ang) * ttBallSpeed * dir;
+    ttBallVx = Math.sin(ang) * ttBallSpeed;
     return true;
   }
 
-  // Collisions
-  bounceFromPaddle(playerX, ttPlayerY, true);
-  bounceFromPaddle(aiX, ttAiY, false);
+  bounceFromPaddle(aiY, ttAiX, true);
+  bounceFromPaddle(playerY, ttPlayerX, false);
 
-  // Score
-  if (ttBallX + ballR < 0) {
-    ttAiScore++;
-    ttUpdateScoreUi();
-    if (!ttWinCheck()) {
-      if (Math.random() < 0.22) ttAiMissBiasUntil = Date.now() + 900; // keep it fun
-      ttResetRound(1);
-    } else {
-      ttStop();
-    }
-  } else if (ttBallX - ballR > w) {
+  // Score (misses top/bottom)
+  if (ttBallY + ballR < 0) {
+    // Haider missed at top -> Zainab scores
     ttPlayerScore++;
     ttUpdateScoreUi();
     if (!ttWinCheck()) {
       if (Math.random() < 0.18) ttAiMissBiasUntil = Date.now() + 800;
-      ttResetRound(-1);
+      ttResetRound(1); // send down
+    } else {
+      ttStop();
+    }
+  } else if (ttBallY - ballR > h) {
+    // Zainab missed at bottom -> Haider scores
+    ttAiScore++;
+    ttUpdateScoreUi();
+    if (!ttWinCheck()) {
+      if (Math.random() < 0.22) ttAiMissBiasUntil = Date.now() + 900;
+      ttResetRound(-1); // send up
     } else {
       ttStop();
     }
@@ -627,8 +634,8 @@ function ttLoop(ts) {
   // Center line
   ctx.globalAlpha = 0.2;
   ctx.fillStyle = '#c71585';
-  for (let y = 10; y < h; y += 22) {
-    ctx.fillRect(w / 2 - 2, y, 4, 12);
+  for (let x = 10; x < w; x += 22) {
+    ctx.fillRect(x, h / 2 - 2, 12, 4);
   }
   ctx.globalAlpha = 1;
 
@@ -646,11 +653,11 @@ function ttLoop(ts) {
     ctx.arcTo(x, y, x + rw, y, rr);
     ctx.closePath();
   }
-  const pTop = ttPlayerY - paddleH / 2;
-  const aTop = ttAiY - paddleH / 2;
-  roundRect(playerX, pTop, paddleW, paddleH, 12);
+  const pLeft = ttPlayerX - paddleW / 2;
+  const aLeft = ttAiX - paddleW / 2;
+  roundRect(pLeft, playerY, paddleW, paddleH, 12);
   ctx.fill(); ctx.stroke();
-  roundRect(aiX, aTop, paddleW, paddleH, 12);
+  roundRect(aLeft, aiY, paddleW, paddleH, 12);
   ctx.fill(); ctx.stroke();
 
   // Ball (heart)
@@ -667,7 +674,15 @@ function ttHandlePointer(clientY) {
   if (!ttCanvas) return;
   const rect = ttCanvas.getBoundingClientRect();
   const y = (clientY - rect.top) / rect.height;
-  ttTargetPlayerY = ttClamp(y * ttCanvas.height, 0, ttCanvas.height);
+  // keep existing signature for backwards usage (no-op)
+  void y;
+}
+
+function ttHandlePointerX(clientX) {
+  if (!ttCanvas) return;
+  const rect = ttCanvas.getBoundingClientRect();
+  const x = (clientX - rect.left) / rect.width;
+  ttTargetPlayerX = ttClamp(x * ttCanvas.width, 0, ttCanvas.width);
 }
 
 function getSpeedLevel() {
@@ -2239,15 +2254,15 @@ gameArea.addEventListener('touchstart', (e) => {
 if (ttCanvas) {
   ttCanvas.addEventListener('mousemove', (e) => {
     if (!ttRunning) return;
-    ttHandlePointer(e.clientY);
+    ttHandlePointerX(e.clientX);
   });
   ttCanvas.addEventListener('touchmove', (e) => {
     if (!ttRunning || !e.touches.length) return;
     e.preventDefault();
-    ttHandlePointer(e.touches[0].clientY);
+    ttHandlePointerX(e.touches[0].clientX);
   }, { passive: false });
   ttCanvas.addEventListener('touchstart', (e) => {
     if (!ttRunning || !e.touches.length) return;
-    ttHandlePointer(e.touches[0].clientY);
+    ttHandlePointerX(e.touches[0].clientX);
   }, { passive: true });
 }

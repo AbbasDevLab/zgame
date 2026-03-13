@@ -442,6 +442,10 @@ let ttBallVx = 0;
 let ttBallVy = 0;
 let ttBallSpeed = 460;
 let ttAiMissBiasUntil = 0;
+let ttAiDesiredX = 0;
+let ttAiNextReactTime = 0;
+let ttAiMissThisApproach = false;
+let ttPlayerPaddleScale = 1;
 
 function ttClamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
@@ -452,6 +456,9 @@ function ttResetRound(direction) {
   ttBallX = w / 2;
   ttBallY = h / 2;
   ttBallSpeed = 420;
+  ttAiMissThisApproach = false;
+  ttAiNextReactTime = 0;
+  ttAiDesiredX = w / 2;
   const dir = direction || (Math.random() < 0.5 ? -1 : 1); // -1 up, +1 down
   const angle = (Math.random() * 0.7 - 0.35);
   ttBallVy = Math.cos(angle) * ttBallSpeed * dir;
@@ -496,6 +503,7 @@ function ttStart() {
 
   ttPlayerScore = 0;
   ttAiScore = 0;
+  ttPlayerPaddleScale = 1;
   ttUpdateScoreUi();
 
   const h = ttCanvas.height;
@@ -530,7 +538,9 @@ function ttLoop(ts) {
 
   // Layout
   const paddleH = Math.max(12, Math.round(h * 0.035));     // thickness
-  const paddleW = Math.max(110, Math.round(w * 0.34));     // length (smaller, iPhone-friendly)
+  const basePaddleW = Math.max(110, Math.round(w * 0.34));     // length (smaller, iPhone-friendly)
+  const playerPaddleW = Math.max(Math.round(basePaddleW * 0.5), Math.round(basePaddleW * ttPlayerPaddleScale));
+  const aiPaddleW = basePaddleW;
   // Match heart mode basket placement: bottom margin + basket height
   const basketBottomPx = (h <= 760) ? 44 : 38;
   const basketHeightPx = (h <= 760) ? 40 : 50;
@@ -542,23 +552,28 @@ function ttLoop(ts) {
 
   // Player paddle follow (smooth)
   const playerSpeed = 1300;
-  const pxTarget = ttClamp(ttTargetPlayerX - paddleW / 2, 0, w - paddleW);
-  const px = ttClamp(ttPlayerX - paddleW / 2, 0, w - paddleW);
+  const pxTarget = ttClamp(ttTargetPlayerX - playerPaddleW / 2, 0, w - playerPaddleW);
+  const px = ttClamp(ttPlayerX - playerPaddleW / 2, 0, w - playerPaddleW);
   const pxNew = px + (pxTarget - px) * (1 - Math.pow(0.0007, dt * playerSpeed));
-  ttPlayerX = ttClamp(pxNew + paddleW / 2, paddleW / 2, w - paddleW / 2);
+  ttPlayerX = ttClamp(pxNew + playerPaddleW / 2, playerPaddleW / 2, w - playerPaddleW / 2);
 
   // AI paddle (slightly imperfect)
   const now = Date.now();
-  const aiMaxSpeed = 700;
-  const aiReaction = 0.11;
-  let aiAimX = ttBallX;
-  if (now < ttAiMissBiasUntil) aiAimX += 130; // intentional miss window
-  const aiErr = (Math.random() - 0.5) * 18;
-  aiAimX += aiErr;
-  const aiTarget = ttClamp(aiAimX, paddleW / 2, w - paddleW / 2);
-  const aiDelta = (aiTarget - ttAiX);
+  const aiMaxSpeed = 620; // slightly slower than perfect
+  const aiReaction = 0.10;
+  // Random reaction delay (50–150ms)
+  if (!ttAiNextReactTime || now >= ttAiNextReactTime) {
+    const delay = 50 + Math.random() * 100;
+    ttAiNextReactTime = now + delay;
+    let aiAimX = ttBallX;
+    if (now < ttAiMissBiasUntil) aiAimX += 170; // intentional miss window
+    const aiErr = (Math.random() - 0.5) * 18;
+    aiAimX += aiErr;
+    ttAiDesiredX = ttClamp(aiAimX, aiPaddleW / 2, w - aiPaddleW / 2);
+  }
+  const aiDelta = (ttAiDesiredX - ttAiX);
   const aiMove = ttClamp(aiDelta * aiReaction, -aiMaxSpeed * dt, aiMaxSpeed * dt);
-  ttAiX = ttClamp(ttAiX + aiMove, paddleW / 2, w - paddleW / 2);
+  ttAiX = ttClamp(ttAiX + aiMove, aiPaddleW / 2, w - aiPaddleW / 2);
 
   // Ball move
   ttBallX += ttBallVx * dt;
@@ -569,9 +584,9 @@ function ttLoop(ts) {
   if (ttBallX + ballR >= w) { ttBallX = w - ballR; ttBallVx *= -1; }
 
   // Paddle collision helper (top/bottom paddles)
-  function bounceFromPaddle(py, pxCenter, isTop) {
-    const pxLeft = pxCenter - paddleW / 2;
-    const pxRight = pxCenter + paddleW / 2;
+  function bounceFromPaddle(py, pxCenter, paddleWidth, isTop) {
+    const pxLeft = pxCenter - paddleWidth / 2;
+    const pxRight = pxCenter + paddleWidth / 2;
     if (ttBallX + ballR < pxLeft || ttBallX - ballR > pxRight) return false;
     if (isTop) {
       // ball moving up, hits top paddle underside
@@ -590,18 +605,28 @@ function ttLoop(ts) {
         return false;
       }
     }
-    const offset = (ttBallX - pxCenter) / (paddleW / 2);
-    const maxAngle = 0.85;
+    // Speed increase per paddle hit: 5–10%, reset on point (ttResetRound)
+    const speedMult = 1.05 + Math.random() * 0.05;
+    ttBallSpeed = Math.min(980, ttBallSpeed * speedMult);
+
+    // Angle variation: center -> straight, edges -> angled
+    const offset = (ttBallX - pxCenter) / (paddleWidth / 2);
+    const maxAngle = 0.9;
     const ang = offset * maxAngle;
-    ttBallSpeed = Math.min(980, ttBallSpeed * 1.04);
     const dir = isTop ? 1 : -1; // after hit: top sends down (+y), bottom sends up (-y)
     ttBallVy = Math.cos(ang) * ttBallSpeed * dir;
     ttBallVx = Math.sin(ang) * ttBallSpeed;
     return true;
   }
 
-  bounceFromPaddle(aiY, ttAiX, true);
-  bounceFromPaddle(safePlayerY, ttPlayerX, false);
+  // Occasionally (5–10% of approaches) AI deliberately misses for fairness
+  if (!ttAiMissThisApproach && ttBallVy < 0 && ttBallY < h * 0.45 && Math.random() < 0.08) {
+    ttAiMissThisApproach = true;
+    ttAiMissBiasUntil = Date.now() + 550;
+  }
+
+  bounceFromPaddle(aiY, ttAiX, aiPaddleW, true);
+  bounceFromPaddle(safePlayerY, ttPlayerX, playerPaddleW, false);
 
   // Score (misses top/bottom)
   if (ttBallY + ballR < 0) {
@@ -617,6 +642,10 @@ function ttLoop(ts) {
   } else if (ttBallY - ballR > h) {
     // Zainab missed at bottom -> Haider scores
     ttAiScore++;
+    // Smaller paddle challenge: every 2 Haider points, shrink player paddle by 10% (min 50%)
+    if (ttAiScore % 2 === 0) {
+      ttPlayerPaddleScale = Math.max(0.5, ttPlayerPaddleScale * 0.9);
+    }
     ttUpdateScoreUi();
     if (!ttWinCheck()) {
       if (Math.random() < 0.22) ttAiMissBiasUntil = Date.now() + 900;
@@ -661,11 +690,11 @@ function ttLoop(ts) {
     ctx.arcTo(x, y, x + rw, y, rr);
     ctx.closePath();
   }
-  const pLeft = ttPlayerX - paddleW / 2;
-  const aLeft = ttAiX - paddleW / 2;
-  roundRect(pLeft, safePlayerY, paddleW, paddleH, 12);
+  const pLeft = ttPlayerX - playerPaddleW / 2;
+  const aLeft = ttAiX - aiPaddleW / 2;
+  roundRect(pLeft, safePlayerY, playerPaddleW, paddleH, 12);
   ctx.fill(); ctx.stroke();
-  roundRect(aLeft, aiY, paddleW, paddleH, 12);
+  roundRect(aLeft, aiY, aiPaddleW, paddleH, 12);
   ctx.fill(); ctx.stroke();
 
   // Ball (heart)

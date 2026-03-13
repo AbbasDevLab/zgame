@@ -226,6 +226,7 @@ const ttCanvas = document.getElementById('tt-canvas');
 const ttScoreEl = document.getElementById('tt-score');
 const ttBackBtn = document.getElementById('tt-back-btn');
 const ttRestartBtn = document.getElementById('tt-restart-btn');
+const ttFooter = document.getElementById('tt-footer');
 const ttResultOverlay = document.getElementById('tt-result-overlay');
 const ttResultTitle = document.getElementById('tt-result-title');
 const ttResultSubtitle = document.getElementById('tt-result-subtitle');
@@ -468,14 +469,16 @@ function ttShowResult(winner) {
     ttResultTitle.textContent = '🏆 Zainab Wins!';
     ttResultSubtitle.textContent = 'Table Tennis Champion!';
   } else {
-    ttResultTitle.textContent = '🤖 Computer Wins!';
+    ttResultTitle.textContent = '🤖 Haider Wins!';
     ttResultSubtitle.textContent = 'Try Again!';
   }
   ttResultOverlay.classList.remove('hidden');
+  if (ttFooter) ttFooter.classList.remove('hidden');
 }
 
 function ttHideResult() {
   if (ttResultOverlay) ttResultOverlay.classList.add('hidden');
+  if (ttFooter) ttFooter.classList.add('hidden');
 }
 
 function ttStop() {
@@ -489,6 +492,7 @@ function ttStart() {
   stopCatchHeartsMode();
   ttStop();
   ttHideResult();
+  if (ttFooter) ttFooter.classList.add('hidden');
 
   ttPlayerScore = 0;
   ttAiScore = 0;
@@ -526,7 +530,7 @@ function ttLoop(ts) {
 
   // Layout
   const paddleH = Math.max(12, Math.round(h * 0.035));     // thickness
-  const paddleW = Math.max(120, Math.round(w * 0.42));     // length
+  const paddleW = Math.max(110, Math.round(w * 0.34));     // length (smaller, iPhone-friendly)
   const pad = Math.max(16, Math.round(h * 0.035));
   const playerY = h - pad - paddleH; // bottom
   const aiY = pad;                   // top

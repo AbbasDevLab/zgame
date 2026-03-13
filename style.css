@@ -124,8 +124,22 @@ body.night-mode .start-heart {
   max-width: 520px;
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 10px;
   margin-top: 4px;
   flex: 0 0 auto;
+}
+
+.tt-mini-btn {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
 }
 
 .tt-score {
@@ -143,7 +157,6 @@ body.night-mode .start-heart {
   width: min(92vw, 420px);
   height: auto;
   aspect-ratio: 9 / 16;
-  max-height: calc(100dvh - 210px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 228, 235, 0.55) 100%);
   box-shadow: 0 10px 30px rgba(199, 21, 133, 0.15);
@@ -163,7 +176,6 @@ body.night-mode .start-heart {
 @media (max-height: 760px) {
   #table-tennis-screen { gap: 8px; }
   .tt-score { padding: 5px 10px; }
-  .tt-canvas { max-height: calc(100dvh - 190px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
   .tt-footer .btn { padding: 12px 22px; font-size: 1.05rem; }
 }
 

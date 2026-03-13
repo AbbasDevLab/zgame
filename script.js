@@ -115,9 +115,9 @@ const BIRTHDAY_CAKE_HEART_CHANCE = 1 / 30;
 const BIRTHDAY_BALLOON_HEART_CHANCE = 0.18;
 
 // Late curve hearts
-const LATE_CURVE_CHANCE = 0.22;
-const DELAYED_HEART_CHANCE = 0.14;
-const FAKE_DIRECTION_CHANCE = 0.16;
+const LATE_CURVE_CHANCE = 0.18;
+const DELAYED_HEART_CHANCE = 0.12;
+const FAKE_DIRECTION_CHANCE = 0.14;
 
 // Heart emojis for variety
 const HEARTS = ['❤️', '💕', '💗', '💖', '💘', '❤️', '💕'];
@@ -532,13 +532,6 @@ function isHeartRainActive() {
 
 function spawnHeart() {
   if (!gameRunning) return;
-  // Smart spawn balancing: avoid overcrowding and keep flow.
-  if (!isHeartRainActive()) {
-    if (hearts.length > 7) {
-      // Too many hearts on screen, let them clear before spawning more.
-      return;
-    }
-  }
   if (bonusHeartSpawnRemaining > 0 && !isHeartRainActive()) {
     bonusHeartSpawnRemaining--;
     if (Math.random() < 0.5) {
@@ -623,15 +616,15 @@ function spawnHeart() {
     isGolden: isGolden,
     isBalloonHeart: isBalloon,
     balloonPhase: isBalloon ? 'up' : null,
-    lateCurve: score < 3000 && Math.random() < LATE_CURVE_CHANCE,
+    lateCurve: Math.random() < LATE_CURVE_CHANCE,
     lateCurveDir: Math.random() < 0.5 ? -1 : 1
   };
-  if (!isBalloon && score < 3000 && Math.random() < DELAYED_HEART_CHANCE) {
+  if (!isBalloon && Math.random() < DELAYED_HEART_CHANCE) {
     obj.delayedHeart = true;
     obj.delayEndTime = Date.now() + 650 + Math.random() * 500; // ~0.65–1.15s pause
     obj.delayBoosted = false;
   }
-  if (!isBalloon && score < 3000 && Math.random() < FAKE_DIRECTION_CHANCE) {
+  if (!isBalloon && Math.random() < FAKE_DIRECTION_CHANCE) {
     obj.fakeDirHeart = true;
     obj.fakeDirDir = Math.random() < 0.5 ? -1 : 1;
     obj.fakeDirSwitched = false;
@@ -1517,7 +1510,7 @@ function gameLoop() {
     if (!holding) {
       if (heart.delayedHeart && !heart.delayBoosted) {
         heart.delayBoosted = true;
-        heart.speed *= 1.8; // fast drop after pause
+        heart.speed *= 1.6; // modest fast drop after pause
       }
       if (heart.isBalloonHeart && heart.balloonPhase === 'up') {
         heart.y -= heart.speed * slowMult * 0.4;

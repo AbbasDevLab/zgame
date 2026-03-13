@@ -111,20 +111,21 @@ body.night-mode .start-heart {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 16px;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: flex-start;
 }
 
 .tt-header {
   width: 100%;
-  max-width: 860px;
+  max-width: 520px;
   display: flex;
   justify-content: center;
-  margin-top: 8px;
+  margin-top: 4px;
+  flex: 0 0 auto;
 }
 
 .tt-score {
@@ -139,9 +140,10 @@ body.night-mode .start-heart {
 }
 
 .tt-canvas {
-  width: min(92vw, 460px);
+  width: min(92vw, 420px);
   height: auto;
   aspect-ratio: 9 / 16;
+  max-height: calc(100dvh - 210px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 228, 235, 0.55) 100%);
   box-shadow: 0 10px 30px rgba(199, 21, 133, 0.15);
@@ -150,11 +152,19 @@ body.night-mode .start-heart {
 
 .tt-footer {
   width: 100%;
-  max-width: 860px;
+  max-width: 520px;
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
+  flex: 0 0 auto;
+}
+
+@media (max-height: 760px) {
+  #table-tennis-screen { gap: 8px; }
+  .tt-score { padding: 5px 10px; }
+  .tt-canvas { max-height: calc(100dvh - 190px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  .tt-footer .btn { padding: 12px 22px; font-size: 1.05rem; }
 }
 
 /* Cursor heart (Easter egg: follows mouse/finger on start screen) */

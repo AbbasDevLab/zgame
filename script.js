@@ -531,6 +531,8 @@ function ttLoop(ts) {
   const playerY = h - pad - paddleH; // bottom
   const aiY = pad;                   // top
   const ballR = Math.max(9, Math.round(w * 0.022));
+  // Safety: never draw paddle off-canvas even if sizes change
+  const safePlayerY = Math.min(playerY, h - paddleH - 4);
 
   // Player paddle follow (smooth)
   const playerSpeed = 1300;
@@ -593,7 +595,7 @@ function ttLoop(ts) {
   }
 
   bounceFromPaddle(aiY, ttAiX, true);
-  bounceFromPaddle(playerY, ttPlayerX, false);
+  bounceFromPaddle(safePlayerY, ttPlayerX, false);
 
   // Score (misses top/bottom)
   if (ttBallY + ballR < 0) {
@@ -655,7 +657,7 @@ function ttLoop(ts) {
   }
   const pLeft = ttPlayerX - paddleW / 2;
   const aLeft = ttAiX - paddleW / 2;
-  roundRect(pLeft, playerY, paddleW, paddleH, 12);
+  roundRect(pLeft, safePlayerY, paddleW, paddleH, 12);
   ctx.fill(); ctx.stroke();
   roundRect(aLeft, aiY, paddleW, paddleH, 12);
   ctx.fill(); ctx.stroke();

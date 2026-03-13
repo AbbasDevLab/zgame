@@ -455,7 +455,7 @@ function ttResetRound(direction) {
   const h = ttCanvas.height;
   ttBallX = w / 2;
   ttBallY = h / 2;
-  ttBallSpeed = 420;
+  ttBallSpeed = 460;
   ttAiMissThisApproach = false;
   ttAiNextReactTime = 0;
   ttAiDesiredX = w / 2;
@@ -561,8 +561,8 @@ function ttLoop(ts) {
   const now = Date.now();
   const totalPoints = ttPlayerScore + ttAiScore;
   // Bot gets a bit more capable as the match goes on
-  const aiMaxSpeed = 580 + Math.min(220, totalPoints * 40); // scales with score
-  const aiReaction = 0.10 + Math.min(0.05, totalPoints * 0.01);
+  const aiMaxSpeed = 640 + Math.min(260, totalPoints * 45); // higher ceiling, scales with score
+  const aiReaction = 0.12 + Math.min(0.06, totalPoints * 0.012);
   // Random reaction delay (50–150ms)
   if (!ttAiNextReactTime || now >= ttAiNextReactTime) {
     const delay = 50 + Math.random() * 100;
@@ -607,9 +607,9 @@ function ttLoop(ts) {
         return false;
       }
     }
-    // Speed increase per paddle hit: 6–11%, reset on point (ttResetRound)
-    const speedMult = 1.06 + Math.random() * 0.05;
-    ttBallSpeed = Math.min(980, ttBallSpeed * speedMult);
+    // Speed increase per paddle hit: 7–12%, reset on point (ttResetRound)
+    const speedMult = 1.07 + Math.random() * 0.05;
+    ttBallSpeed = Math.min(1040, ttBallSpeed * speedMult);
 
     // Angle variation: center -> straight, edges -> angled
     const offset = (ttBallX - pxCenter) / (paddleWidth / 2);

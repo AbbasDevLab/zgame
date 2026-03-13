@@ -538,7 +538,7 @@ function ttLoop(ts) {
 
   // Layout
   const paddleH = Math.max(12, Math.round(h * 0.035));     // thickness
-  const basePaddleW = Math.max(110, Math.round(w * 0.34));     // length (smaller, iPhone-friendly)
+  const basePaddleW = Math.max(90, Math.round(w * 0.26));     // length (narrower for more challenge)
   const playerPaddleW = Math.max(Math.round(basePaddleW * 0.5), Math.round(basePaddleW * ttPlayerPaddleScale));
   const aiPaddleW = basePaddleW;
   // Match heart mode basket placement: bottom margin + basket height

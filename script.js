@@ -163,7 +163,8 @@ const COMBO_MESSAGES = [
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
-const btnBasketMode = document.getElementById('btn-basket-mode');
+const btnCatchHeartsMode = document.getElementById('btn-catch-hearts-mode');
+const btnTableTennisMode = document.getElementById('btn-table-tennis-mode');
 const btnTapMode = document.getElementById('btn-tap-mode');
 const restartBtn = document.getElementById('restart-btn');
 const backToMenuBtn = document.getElementById('back-to-menu-btn');
@@ -220,6 +221,15 @@ const birthdayStartContinueBtn = document.getElementById('birthday-start-continu
 const birthdaySecretOverlay = document.getElementById('birthday-secret-overlay');
 const birthdaySecretContinueBtn = document.getElementById('birthday-secret-continue-btn');
 const introMessageEl = document.getElementById('intro-message');
+const tableTennisScreen = document.getElementById('table-tennis-screen');
+const ttCanvas = document.getElementById('tt-canvas');
+const ttScoreEl = document.getElementById('tt-score');
+const ttBackBtn = document.getElementById('tt-back-btn');
+const ttRestartBtn = document.getElementById('tt-restart-btn');
+const ttResultOverlay = document.getElementById('tt-result-overlay');
+const ttResultTitle = document.getElementById('tt-result-title');
+const ttResultSubtitle = document.getElementById('tt-result-subtitle');
+const ttResultContinueBtn = document.getElementById('tt-result-continue-btn');
 
 const BASKET_WIDTH = 12;
 const HEART_SPAWN_MIN = 14;
@@ -397,7 +407,265 @@ function showScreen(screen) {
   startScreen.classList.add('hidden');
   gameScreen.classList.add('hidden');
   gameOverScreen.classList.add('hidden');
+  if (tableTennisScreen) tableTennisScreen.classList.add('hidden');
   screen.classList.remove('hidden');
+}
+
+function stopCatchHeartsMode() {
+  gameRunning = false;
+  clearInterval(spawnInterval);
+  cancelAnimationFrame(gameLoopId);
+  if (heartRainInterval) clearInterval(heartRainInterval);
+  heartRainInterval = null;
+  hearts.forEach(h => h.element.remove());
+  hearts = [];
+  pendingMisses = [];
+  if (catchBurstEl) catchBurstEl.classList.add('hidden');
+  if (floatingMessageEl) floatingMessageEl.classList.add('hidden');
+}
+
+// ---------------------------
+// Heart Table Tennis Mode
+// ---------------------------
+let ttRunning = false;
+let ttRaf = 0;
+let ttLastTs = 0;
+let ttPlayerScore = 0;
+let ttAiScore = 0;
+let ttPlayerY = 0;
+let ttAiY = 0;
+let ttTargetPlayerY = 0;
+let ttBallX = 0;
+let ttBallY = 0;
+let ttBallVx = 0;
+let ttBallVy = 0;
+let ttBallSpeed = 460;
+let ttAiMissBiasUntil = 0;
+
+function ttClamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+function ttResetRound(direction) {
+  if (!ttCanvas) return;
+  const w = ttCanvas.width;
+  const h = ttCanvas.height;
+  ttBallX = w / 2;
+  ttBallY = h / 2;
+  ttBallSpeed = 460;
+  const dir = direction || (Math.random() < 0.5 ? -1 : 1);
+  const angle = (Math.random() * 0.6 - 0.3);
+  ttBallVx = Math.cos(angle) * ttBallSpeed * dir;
+  ttBallVy = Math.sin(angle) * ttBallSpeed * (Math.random() < 0.5 ? -1 : 1);
+}
+
+function ttUpdateScoreUi() {
+  if (!ttScoreEl) return;
+  ttScoreEl.textContent = `Zainab ❤️ ${ttPlayerScore}  |  Computer 🤖 ${ttAiScore}`;
+}
+
+function ttShowResult(winner) {
+  if (!ttResultOverlay || !ttResultTitle || !ttResultSubtitle) return;
+  if (winner === 'player') {
+    ttResultTitle.textContent = '🏆 Zainab Wins!';
+    ttResultSubtitle.textContent = 'Table Tennis Champion!';
+  } else {
+    ttResultTitle.textContent = '🤖 Computer Wins!';
+    ttResultSubtitle.textContent = 'Try Again!';
+  }
+  ttResultOverlay.classList.remove('hidden');
+}
+
+function ttHideResult() {
+  if (ttResultOverlay) ttResultOverlay.classList.add('hidden');
+}
+
+function ttStop() {
+  ttRunning = false;
+  cancelAnimationFrame(ttRaf);
+  ttRaf = 0;
+}
+
+function ttStart() {
+  if (!tableTennisScreen || !ttCanvas) return;
+  stopCatchHeartsMode();
+  ttStop();
+  ttHideResult();
+
+  ttPlayerScore = 0;
+  ttAiScore = 0;
+  ttUpdateScoreUi();
+
+  const h = ttCanvas.height;
+  ttPlayerY = h / 2;
+  ttAiY = h / 2;
+  ttTargetPlayerY = h / 2;
+  ttAiMissBiasUntil = 0;
+  ttResetRound();
+
+  showScreen(tableTennisScreen);
+  ttRunning = true;
+  ttLastTs = 0;
+  ttRaf = requestAnimationFrame(ttLoop);
+}
+
+function ttWinCheck() {
+  if (ttPlayerScore >= 5) { ttShowResult('player'); return true; }
+  if (ttAiScore >= 5) { ttShowResult('ai'); return true; }
+  return false;
+}
+
+function ttLoop(ts) {
+  if (!ttRunning || !ttCanvas) return;
+  const ctx = ttCanvas.getContext('2d');
+  if (!ctx) return;
+
+  const w = ttCanvas.width;
+  const h = ttCanvas.height;
+  const dt = Math.min(0.033, ttLastTs ? (ts - ttLastTs) / 1000 : 0);
+  ttLastTs = ts;
+
+  // Layout
+  const paddleW = 14;
+  const paddleH = 92;
+  const pad = 18;
+  const playerX = pad;
+  const aiX = w - pad - paddleW;
+  const ballR = 10;
+
+  // Player paddle follow (smooth)
+  const playerSpeed = 1200;
+  const pyTarget = ttClamp(ttTargetPlayerY - paddleH / 2, 0, h - paddleH);
+  const py = ttClamp(ttPlayerY - paddleH / 2, 0, h - paddleH);
+  const pyNew = py + (pyTarget - py) * (1 - Math.pow(0.0007, dt * playerSpeed));
+  ttPlayerY = ttClamp(pyNew + paddleH / 2, paddleH / 2, h - paddleH / 2);
+
+  // AI paddle (slightly imperfect)
+  const now = Date.now();
+  const aiMaxSpeed = 520;
+  const aiReaction = 0.10;
+  let aiAimY = ttBallY;
+  if (now < ttAiMissBiasUntil) aiAimY += 90; // intentional miss window
+  const aiErr = (Math.random() - 0.5) * 12;
+  aiAimY += aiErr;
+  const aiTarget = ttClamp(aiAimY, paddleH / 2, h - paddleH / 2);
+  const aiDelta = (aiTarget - ttAiY);
+  const aiMove = ttClamp(aiDelta * aiReaction, -aiMaxSpeed * dt, aiMaxSpeed * dt);
+  ttAiY = ttClamp(ttAiY + aiMove, paddleH / 2, h - paddleH / 2);
+
+  // Ball move
+  ttBallX += ttBallVx * dt;
+  ttBallY += ttBallVy * dt;
+
+  // Wall bounce
+  if (ttBallY - ballR <= 0) { ttBallY = ballR; ttBallVy *= -1; }
+  if (ttBallY + ballR >= h) { ttBallY = h - ballR; ttBallVy *= -1; }
+
+  // Paddle collision helper
+  function bounceFromPaddle(px, pyCenter, isLeft) {
+    const pyTop = pyCenter - paddleH / 2;
+    const pyBot = pyCenter + paddleH / 2;
+    if (ttBallY + ballR < pyTop || ttBallY - ballR > pyBot) return false;
+    if (isLeft) {
+      if (ttBallX - ballR > px + paddleW) return false;
+      if (ttBallX - ballR < px && ttBallVx < 0) {
+        ttBallX = px + paddleW + ballR;
+      }
+    } else {
+      if (ttBallX + ballR < px) return false;
+      if (ttBallX + ballR > px + paddleW && ttBallVx > 0) {
+        ttBallX = px - ballR;
+      }
+    }
+    // Reflect + add angle based on hit position
+    const offset = (ttBallY - pyCenter) / (paddleH / 2);
+    const maxAngle = 0.95;
+    const ang = offset * maxAngle;
+    ttBallSpeed = Math.min(920, ttBallSpeed * 1.04);
+    const dir = isLeft ? 1 : -1;
+    ttBallVx = Math.cos(ang) * ttBallSpeed * dir;
+    ttBallVy = Math.sin(ang) * ttBallSpeed;
+    return true;
+  }
+
+  // Collisions
+  bounceFromPaddle(playerX, ttPlayerY, true);
+  bounceFromPaddle(aiX, ttAiY, false);
+
+  // Score
+  if (ttBallX + ballR < 0) {
+    ttAiScore++;
+    ttUpdateScoreUi();
+    if (!ttWinCheck()) {
+      if (Math.random() < 0.22) ttAiMissBiasUntil = Date.now() + 900; // keep it fun
+      ttResetRound(1);
+    } else {
+      ttStop();
+    }
+  } else if (ttBallX - ballR > w) {
+    ttPlayerScore++;
+    ttUpdateScoreUi();
+    if (!ttWinCheck()) {
+      if (Math.random() < 0.18) ttAiMissBiasUntil = Date.now() + 800;
+      ttResetRound(-1);
+    } else {
+      ttStop();
+    }
+  }
+
+  // Draw
+  ctx.clearRect(0, 0, w, h);
+
+  // Background hearts (subtle)
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#c71585';
+  for (let i = 0; i < 10; i++) {
+    ctx.font = '28px Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji';
+    ctx.fillText('💖', (i * 80 + 30) % w, (i * 45 + 40) % h);
+  }
+  ctx.globalAlpha = 1;
+
+  // Center line
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#c71585';
+  for (let y = 10; y < h; y += 22) {
+    ctx.fillRect(w / 2 - 2, y, 4, 12);
+  }
+  ctx.globalAlpha = 1;
+
+  // Paddles
+  ctx.fillStyle = '#ff69b4';
+  ctx.strokeStyle = '#db7093';
+  ctx.lineWidth = 3;
+  function roundRect(x, y, rw, rh, r) {
+    const rr = Math.min(r, rw / 2, rh / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + rw, y, x + rw, y + rh, rr);
+    ctx.arcTo(x + rw, y + rh, x, y + rh, rr);
+    ctx.arcTo(x, y + rh, x, y, rr);
+    ctx.arcTo(x, y, x + rw, y, rr);
+    ctx.closePath();
+  }
+  const pTop = ttPlayerY - paddleH / 2;
+  const aTop = ttAiY - paddleH / 2;
+  roundRect(playerX, pTop, paddleW, paddleH, 12);
+  ctx.fill(); ctx.stroke();
+  roundRect(aiX, aTop, paddleW, paddleH, 12);
+  ctx.fill(); ctx.stroke();
+
+  // Ball (heart)
+  ctx.font = '22px Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('❤️', ttBallX, ttBallY);
+
+  ttRaf = requestAnimationFrame(ttLoop);
+}
+
+function ttHandlePointer(clientY) {
+  if (!ttCanvas) return;
+  const rect = ttCanvas.getBoundingClientRect();
+  const y = (clientY - rect.top) / rect.height;
+  ttTargetPlayerY = ttClamp(y * ttCanvas.height, 0, ttCanvas.height);
 }
 
 function getSpeedLevel() {
@@ -1883,7 +2151,8 @@ document.addEventListener('touchmove', (e) => {
   if (e.touches.length) updateCursorHeart(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: true });
 
-if (btnBasketMode) btnBasketMode.addEventListener('click', () => { ensureAudioInitialized(); startGame('basket'); });
+if (btnCatchHeartsMode) btnCatchHeartsMode.addEventListener('click', () => { ensureAudioInitialized(); startGame('basket'); });
+if (btnTableTennisMode) btnTableTennisMode.addEventListener('click', () => { ensureAudioInitialized(); ttStart(); });
 if (btnTapMode) btnTapMode.addEventListener('click', () => { ensureAudioInitialized(); startGame('tap'); });
 restartBtn.addEventListener('click', () => startGame(gameMode));
 if (backToMenuBtn) backToMenuBtn.addEventListener('click', () => {
@@ -1895,6 +2164,19 @@ if (backToMenuBtn) backToMenuBtn.addEventListener('click', () => {
   showScreen(startScreen);
   fillStartHearts();
   applyNightMode();
+});
+if (ttBackBtn) ttBackBtn.addEventListener('click', () => {
+  ttStop();
+  showScreen(startScreen);
+  fillStartHearts();
+  applyNightMode();
+});
+if (ttRestartBtn) ttRestartBtn.addEventListener('click', () => {
+  ttStart();
+});
+if (ttResultContinueBtn) ttResultContinueBtn.addEventListener('click', () => {
+  ttHideResult();
+  ttStart();
 });
 if (audioToggleBtn) audioToggleBtn.addEventListener('click', toggleAudio);
 if (secretContinueBtn) secretContinueBtn.addEventListener('click', resumeAfterSecret);
@@ -1951,3 +2233,19 @@ gameArea.addEventListener('touchstart', (e) => {
     lastTapTime = now;
   }
 }, { passive: true });
+
+if (ttCanvas) {
+  ttCanvas.addEventListener('mousemove', (e) => {
+    if (!ttRunning) return;
+    ttHandlePointer(e.clientY);
+  });
+  ttCanvas.addEventListener('touchmove', (e) => {
+    if (!ttRunning || !e.touches.length) return;
+    e.preventDefault();
+    ttHandlePointer(e.touches[0].clientY);
+  }, { passive: false });
+  ttCanvas.addEventListener('touchstart', (e) => {
+    if (!ttRunning || !e.touches.length) return;
+    ttHandlePointer(e.touches[0].clientY);
+  }, { passive: true });
+}

@@ -106,6 +106,57 @@ body.night-mode .start-heart {
   min-width: 200px;
 }
 
+/* Table tennis (pong) mode */
+#table-tennis-screen {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.tt-header {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.tt-score {
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(199, 21, 133, 0.18);
+  color: #8b4789;
+  font-weight: 700;
+  font-size: clamp(0.95rem, 2.6vw, 1.15rem);
+  text-align: center;
+}
+
+.tt-canvas {
+  width: min(92vw, 860px);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 228, 235, 0.55) 100%);
+  box-shadow: 0 10px 30px rgba(199, 21, 133, 0.15);
+  touch-action: none;
+}
+
+.tt-footer {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
 /* Cursor heart (Easter egg: follows mouse/finger on start screen) */
 .cursor-heart {
   position: fixed;

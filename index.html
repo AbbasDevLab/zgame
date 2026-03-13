@@ -17,7 +17,8 @@
     <h1 class="game-title" id="game-title">Catch Haider's Love</h1>
     <p class="intro-message" id="intro-message">This game was made specially for Zainab by Haider ❤️</p>
     <div class="mode-buttons">
-      <button id="btn-basket-mode" class="btn btn-mode">Play</button>
+      <button id="btn-catch-hearts-mode" class="btn btn-mode">❤️ Catch Hearts Mode</button>
+      <button id="btn-table-tennis-mode" class="btn btn-mode btn-secondary">🏓 Heart Table Tennis Mode</button>
     </div>
     <div id="easter-egg-msg" class="easter-egg-msg hidden" aria-live="polite"></div>
   </div>
@@ -140,6 +141,25 @@
       <div id="birthday-fireworks-layer" class="birthday-fireworks-layer hidden" aria-hidden="true"></div>
       <div id="basket"></div>
       <div id="hearts-container"></div>
+    </div>
+  </div>
+
+  <!-- Heart Table Tennis Mode (Pong) -->
+  <div id="table-tennis-screen" class="hidden">
+    <div class="tt-header">
+      <div class="tt-score" id="tt-score">Zainab ❤️ 0  |  Computer 🤖 0</div>
+    </div>
+    <canvas id="tt-canvas" class="tt-canvas" width="800" height="450" aria-label="Heart Table Tennis"></canvas>
+    <div class="tt-footer">
+      <button id="tt-back-btn" class="btn btn-secondary">Back to Menu</button>
+      <button id="tt-restart-btn" class="btn">Play Again</button>
+    </div>
+    <div id="tt-result-overlay" class="secret-overlay hidden">
+      <div class="secret-card">
+        <p class="secret-badge" id="tt-result-title">🏆 Zainab Wins!</p>
+        <p class="secret-line2" id="tt-result-subtitle">Table Tennis Champion!</p>
+        <button id="tt-result-continue-btn" class="btn secret-btn">Play Again</button>
+      </div>
     </div>
   </div>
 

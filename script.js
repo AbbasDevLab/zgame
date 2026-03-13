@@ -542,7 +542,7 @@ function ttLoop(ts) {
   const playerPaddleW = Math.max(Math.round(basePaddleW * 0.5), Math.round(basePaddleW * ttPlayerPaddleScale));
   const aiPaddleW = basePaddleW;
   // Match heart mode basket placement: bottom margin + basket height
-  const basketBottomPx = (h <= 760) ? 78 : 68;
+  const basketBottomPx = (h <= 760) ? 86 : 76;
   const basketHeightPx = (h <= 760) ? 40 : 50;
   const playerY = ttClamp(h - basketBottomPx - basketHeightPx, 8, h - paddleH - 4);
   const aiY = Math.max(12, Math.round(h * 0.035)); // top

@@ -559,8 +559,10 @@ function ttLoop(ts) {
 
   // AI paddle (slightly imperfect)
   const now = Date.now();
-  const aiMaxSpeed = 620; // slightly slower than perfect
-  const aiReaction = 0.10;
+  const totalPoints = ttPlayerScore + ttAiScore;
+  // Bot gets a bit more capable as the match goes on
+  const aiMaxSpeed = 580 + Math.min(220, totalPoints * 40); // scales with score
+  const aiReaction = 0.10 + Math.min(0.05, totalPoints * 0.01);
   // Random reaction delay (50–150ms)
   if (!ttAiNextReactTime || now >= ttAiNextReactTime) {
     const delay = 50 + Math.random() * 100;
@@ -605,8 +607,8 @@ function ttLoop(ts) {
         return false;
       }
     }
-    // Speed increase per paddle hit: 5–10%, reset on point (ttResetRound)
-    const speedMult = 1.05 + Math.random() * 0.05;
+    // Speed increase per paddle hit: 6–11%, reset on point (ttResetRound)
+    const speedMult = 1.06 + Math.random() * 0.05;
     ttBallSpeed = Math.min(980, ttBallSpeed * speedMult);
 
     // Angle variation: center -> straight, edges -> angled
@@ -620,7 +622,7 @@ function ttLoop(ts) {
   }
 
   // Occasionally (5–10% of approaches) AI deliberately misses for fairness
-  if (!ttAiMissThisApproach && ttBallVy < 0 && ttBallY < h * 0.45 && Math.random() < 0.08) {
+  if (!ttAiMissThisApproach && ttBallVy < 0 && ttBallY < h * 0.45 && Math.random() < 0.05) {
     ttAiMissThisApproach = true;
     ttAiMissBiasUntil = Date.now() + 550;
   }

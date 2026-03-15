@@ -57,6 +57,14 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (req.method === 'GET') {
+    res.status(200).json({
+      ok: true,
+      message: 'Heart AI chat API. Send POST with body: { "message": "your text", "memory": {} }'
+    });
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;

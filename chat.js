@@ -115,7 +115,8 @@
 
   function sendMessageToAI(message, options) {
     const payload = { message, memory: { ...zainabMemory } };
-    const endpoint = '/api/chat';
+    const base = (typeof window !== 'undefined' && window.HEART_AI_API_URL) ? window.HEART_AI_API_URL.replace(/\/$/, '') : '';
+    const endpoint = base + '/api/chat';
 
     if (options && options.heartOnly) {
       appendMessage('A heart for me? Thank you Zainab ❤️', false);
@@ -133,15 +134,14 @@
         return res.json();
       })
       .then(function (data) {
-        let reply = (data && (data.reply || data.message || data.text)) ? (data.reply || data.message || data.text) : getMockReply(message, options);
-        if (reply && (reply.indexOf('Something went wrong') !== -1 || reply.indexOf("can't connect") !== -1)) {
-          reply = getMockReply(message, options);
-        }
+        const raw = (data && (data.reply || data.message || data.text)) ? (data.reply || data.message || data.text) : '';
+        const isErrorReply = raw && (raw.indexOf('Something went wrong') !== -1 || raw.indexOf("can't connect") !== -1 || raw.indexOf("couldn't connect") !== -1);
+        const reply = raw && !isErrorReply ? raw : (isErrorReply ? "I'm having a little connection trouble right now. Try again in a moment? ❤️" : getMockReply(message, options));
         appendMessage(reply, false);
         resetIdleTimer();
       })
       .catch(function () {
-        appendMessage(getMockReply(message, options), false);
+        appendMessage("I'm having a little connection trouble right now. Try again in a moment? ❤️", false);
         resetIdleTimer();
       });
   }

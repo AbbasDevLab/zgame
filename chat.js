@@ -135,13 +135,12 @@
       })
       .then(function (data) {
         const raw = (data && (data.reply || data.message || data.text)) ? (data.reply || data.message || data.text) : '';
-        const isErrorReply = raw && (raw.indexOf('Something went wrong') !== -1 || raw.indexOf("can't connect") !== -1 || raw.indexOf("couldn't connect") !== -1);
-        const reply = raw && !isErrorReply ? raw : (isErrorReply ? "I'm having a little connection trouble right now. Try again in a moment? ❤️" : getMockReply(message, options));
+        const reply = raw ? raw : getMockReply(message, options);
         appendMessage(reply, false);
         resetIdleTimer();
       })
       .catch(function () {
-        appendMessage("I'm having a little connection trouble right now. Try again in a moment? ❤️", false);
+        appendMessage("I couldn't reach the server. Check your connection and try again? ❤️", false);
         resetIdleTimer();
       });
   }

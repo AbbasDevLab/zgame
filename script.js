@@ -746,19 +746,19 @@ function hapticCatch() {
 function ensureAudioInitialized() {
   if (audioInitialized) return;
   audioInitialized = true;
-  if (bgMusicEl && !isMuted) {
+  if (bgMusicEl && bgMusicEl.src && !isMuted) {
     try {
       bgMusicEl.volume = 0.35;
-      bgMusicEl.play().catch(() => {});
+      bgMusicEl.play().catch(function () {});
     } catch (_) {}
   }
 }
 
 function playSfx(el) {
-  if (!el || isMuted) return;
+  if (!el || isMuted || !el.src) return;
   try {
     el.currentTime = 0;
-    el.play();
+    el.play().catch(function () {});
   } catch (_) {}
 }
 
@@ -771,8 +771,8 @@ function toggleAudio() {
   [sfxCatchEl, sfxTapEl, sfxGoldenEl, sfxComboEl, sfxHeartRainEl, bgMusicEl].forEach(a => {
     if (a) a.muted = isMuted;
   });
-  if (bgMusicEl && !isMuted && audioInitialized) {
-    try { bgMusicEl.play().catch(() => {}); } catch (_) {}
+  if (bgMusicEl && bgMusicEl.src && !isMuted && audioInitialized) {
+    try { bgMusicEl.play().catch(function () {}); } catch (_) {}
   }
 }
 

@@ -444,7 +444,6 @@ let ttBallSpeed = 460;
 let ttAiMissBiasUntil = 0;
 let ttAiDesiredX = 0;
 let ttAiNextReactTime = 0;
-let ttAiMissThisApproach = false;
 let ttPlayerPaddleScale = 1;
 
 function ttClamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
@@ -456,7 +455,6 @@ function ttResetRound(direction) {
   ttBallX = w / 2;
   ttBallY = h / 2;
   ttBallSpeed = 460;
-  ttAiMissThisApproach = false;
   ttAiNextReactTime = 0;
   ttAiDesiredX = w / 2;
   const dir = direction || (Math.random() < 0.5 ? -1 : 1); // -1 up, +1 down
@@ -560,16 +558,15 @@ function ttLoop(ts) {
   // AI paddle (slightly imperfect)
   const now = Date.now();
   const totalPoints = ttPlayerScore + ttAiScore;
-  // Bot gets a bit more capable as the match goes on
-  const aiMaxSpeed = 640 + Math.min(260, totalPoints * 45); // higher ceiling, scales with score
-  const aiReaction = 0.12 + Math.min(0.06, totalPoints * 0.012);
-  // Random reaction delay (50–150ms)
+  // Near‑perfect bot: high speed and quick reaction, scales slightly with score
+  const aiMaxSpeed = 900 + Math.min(300, totalPoints * 40);
+  const aiReaction = 0.18 + Math.min(0.07, totalPoints * 0.008);
+  // Very small reaction delay (0–20ms) so it feels sharp
   if (!ttAiNextReactTime || now >= ttAiNextReactTime) {
-    const delay = 50 + Math.random() * 100;
+    const delay = Math.random() * 20;
     ttAiNextReactTime = now + delay;
     let aiAimX = ttBallX;
-    if (now < ttAiMissBiasUntil) aiAimX += 170; // intentional miss window
-    const aiErr = (Math.random() - 0.5) * 18;
+    const aiErr = (Math.random() - 0.5) * 6; // tiny imperfection
     aiAimX += aiErr;
     ttAiDesiredX = ttClamp(aiAimX, aiPaddleW / 2, w - aiPaddleW / 2);
   }
@@ -619,12 +616,6 @@ function ttLoop(ts) {
     ttBallVy = Math.cos(ang) * ttBallSpeed * dir;
     ttBallVx = Math.sin(ang) * ttBallSpeed;
     return true;
-  }
-
-  // Occasionally (5–10% of approaches) AI deliberately misses for fairness
-  if (!ttAiMissThisApproach && ttBallVy < 0 && ttBallY < h * 0.45 && Math.random() < 0.05) {
-    ttAiMissThisApproach = true;
-    ttAiMissBiasUntil = Date.now() + 550;
   }
 
   bounceFromPaddle(aiY, ttAiX, aiPaddleW, true);

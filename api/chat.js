@@ -6,6 +6,7 @@
 
 const DEFAULT_MODELS = [
   'gemini-2.5-flash',
+  'gemma-3-1b-it',
   'gemini-2.5-flash-lite',
   'gemini-3-flash',
   'gemini-3.1-flash-lite'

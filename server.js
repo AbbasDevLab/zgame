@@ -13,7 +13,7 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 const HEART_AI_SYSTEM = `You are Heart AI, a friendly AI companion created by Haider for Zainab.
 

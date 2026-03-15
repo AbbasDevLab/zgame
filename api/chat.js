@@ -3,7 +3,7 @@
  * Uses Gemini with Heart AI personality. Set GEMINI_API_KEY in Vercel env.
  */
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 const HEART_AI_SYSTEM = `You are Heart AI, a friendly AI companion created by Haider for Zainab.
 
@@ -100,10 +100,21 @@ export default async function handler(req, res) {
       body: geminiBody
     });
     const data = await r.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-      ? data.candidates[0].content.parts[0].text
-      : (data.error?.message) ? 'Something went wrong. Try again? ❤️' : "I'm here! ❤️";
-    res.status(200).json({ reply: text.trim() });
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) {
+      res.status(200).json({ reply: text.trim() });
+      return;
+    }
+
+    const errMsg = data.error?.message || data.error?.status || (typeof data.error === 'string' ? data.error : '');
+    const isAuthError = r.status === 401 || r.status === 403 || (errMsg && /API key|invalid|permission|quota/i.test(errMsg));
+
+    const friendlyReply = isAuthError
+      ? "I can't connect right now — please check that the API key is set correctly. ❤️"
+      : "Something went wrong. Try again in a moment? ❤️";
+
+    res.status(200).json({ reply: friendlyReply });
   } catch (err) {
     res.status(200).json({
       reply: "I'm having a little trouble right now. Try again in a moment? ❤️"

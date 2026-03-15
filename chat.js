@@ -35,12 +35,6 @@
     "What's your favorite color?"
   ];
 
-  const randomIdleQuestions = [
-    "Random question time 🎲\nWhat's something that made you smile today?",
-    "Quick one 🎲\nWhat are you up to right now?",
-    "Fun question 🎲\nIf you could have dinner with anyone, who would it be?"
-  ];
-
   const systemPrompt = 'You are Heart AI, a friendly AI companion created by Haider for Zainab. Your purpose is to make Zainab feel happy, relaxed, and excited to talk. You speak in a warm, playful tone like a supportive friend. You enjoy: chatting about daily life, asking fun questions, joking lightly, encouraging Zainab. Keep responses short and friendly. Sometimes use emojis like ❤️ 😊 Never sound like a formal assistant.';
 
   const chatScreen = document.getElementById('chat-screen');
@@ -164,8 +158,6 @@
   function resetIdleTimer() {
     if (idleTimer) clearTimeout(idleTimer);
     idleTimer = setTimeout(function () {
-      const msg = randomIdleQuestions[Math.floor(Math.random() * randomIdleQuestions.length)];
-      appendMessage(msg, false);
       resetIdleTimer();
     }, IDLE_MS);
   }

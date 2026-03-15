@@ -3,7 +3,7 @@
  * Uses Gemini with Heart AI personality. Set GEMINI_API_KEY in Vercel env.
  */
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 const HEART_AI_SYSTEM = `You are Heart AI, a friendly AI companion created by Haider for Zainab.
 

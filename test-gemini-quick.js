@@ -4,7 +4,7 @@
  */
 async function testGemini() {
   const API_KEY = "YOUR_API_KEY"; // <-- paste your key here
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
   const response = await fetch(url, {
     method: "POST",

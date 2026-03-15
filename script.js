@@ -404,11 +404,14 @@ function triggerZainabSkyEvent() {
   }, 3800);
 }
 
+const chatScreen = document.getElementById('chat-screen');
+
 function showScreen(screen) {
   startScreen.classList.add('hidden');
   gameScreen.classList.add('hidden');
   gameOverScreen.classList.add('hidden');
   if (tableTennisScreen) tableTennisScreen.classList.add('hidden');
+  if (chatScreen) chatScreen.classList.add('hidden');
   screen.classList.remove('hidden');
 }
 

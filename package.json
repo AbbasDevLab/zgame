@@ -1,0 +1,16 @@
+{
+  "name": "hearts-for-zainab",
+  "version": "1.0.0",
+  "description": "Hearts for Zainab — game and Heart AI chat",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}

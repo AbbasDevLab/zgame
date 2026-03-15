@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Catch Haider's Love</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="chat.css">
 </head>
 <body>
   <div id="audio-toggle" class="audio-toggle" aria-label="Toggle sound" role="button">🔊</div>
@@ -19,6 +20,7 @@
     <div class="mode-buttons">
       <button id="btn-catch-hearts-mode" class="btn btn-mode">❤️ Catch Hearts Mode</button>
       <button id="btn-table-tennis-mode" class="btn btn-mode btn-secondary">🏓 Heart Table Tennis Mode</button>
+      <button id="btn-chat-mode" class="btn btn-mode btn-secondary">💬 Chat with Heart AI</button>
     </div>
     <div id="easter-egg-msg" class="easter-egg-msg hidden" aria-live="polite"></div>
   </div>
@@ -163,6 +165,26 @@
     </div>
   </div>
 
+  <!-- Zainab Chat Companion -->
+  <div id="chat-screen" class="hidden chat-screen">
+    <div class="chat-hearts-bg" aria-hidden="true"></div>
+    <header class="chat-header">
+      <button id="chat-back-btn" class="chat-back-btn" aria-label="Back to Menu">←</button>
+      <h2 class="chat-title">❤️ Heart AI</h2>
+    </header>
+    <div class="chat-messages" id="chat-messages">
+      <!-- messages appended here -->
+    </div>
+    <div class="chat-actions">
+      <button type="button" id="chat-question-game-btn" class="chat-action-btn">🎲 Play Question Game</button>
+      <button type="button" id="chat-send-heart-btn" class="chat-action-btn">❤️ Send a Heart</button>
+    </div>
+    <div class="chat-input-wrap">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." autocomplete="off" enterkeyhint="send" />
+      <button type="button" id="chat-send-btn" class="chat-send-btn" aria-label="Send">❤️</button>
+    </div>
+  </div>
+
   <!-- Game Over Screen -->
   <div id="game-over-screen" class="hidden">
     <div id="gameover-hearts" aria-hidden="true"></div>
@@ -194,5 +216,6 @@
   <footer class="page-footer">Made with ❤️ by Haider</footer>
 
   <script src="script.js"></script>
+  <script src="chat.js"></script>
 </body>
 </html>

@@ -13,7 +13,22 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+const DEFAULT_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-3-flash',
+  'gemini-3.1-flash-lite'
+];
+
+function getModelList() {
+  const custom = process.env.GEMINI_MODEL;
+  if (custom) {
+    const rest = DEFAULT_MODELS.filter(m => m !== custom);
+    return [custom].concat(rest);
+  }
+  return DEFAULT_MODELS.slice();
+}
 
 const HEART_AI_SYSTEM = `You are Heart AI, a friendly AI companion created by Haider for Zainab.
 
@@ -99,7 +114,6 @@ function handleApiChat(req, res) {
       return;
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
     const geminiBody = JSON.stringify({
       contents: [{ parts: [{ text: message || 'Hello' }] }],
       systemInstruction: { parts: [{ text: systemInstruction }] },
@@ -109,27 +123,44 @@ function handleApiChat(req, res) {
       }
     });
 
-    fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: geminiBody
-    })
-      .then(r => r.json())
-      .then(data => {
-        const text = data.candidates && data.candidates[0] && data.candidates[0].content &&
-          data.candidates[0].content.parts && data.candidates[0].content.parts[0]
-          ? data.candidates[0].content.parts[0].text
-          : (data.error && data.error.message) ? 'Something went wrong. Try again? ❤️' : "I'm here! ❤️";
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ reply: text.trim() }));
-      })
-      .catch(err => {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          reply: "I'm having a little trouble right now. Try again in a moment? ❤️",
-          error: err.message
-        }));
-      });
+    function isRateLimitError(status, data) {
+      if (status === 429) return true;
+      const msg = (data && data.error && data.error.message) ? String(data.error.message) : '';
+      return /rate limit|quota|resource exhausted|429|too many requests/i.test(msg);
+    }
+
+    const models = getModelList();
+    (async function tryModels() {
+      for (let i = 0; i < models.length; i++) {
+        const model = models[i];
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+        try {
+          const r = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: geminiBody
+          });
+          const data = await r.json();
+          const text = data.candidates && data.candidates[0] && data.candidates[0].content &&
+            data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+            ? data.candidates[0].content.parts[0].text
+            : null;
+          if (text && typeof text === 'string') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ reply: text.trim() }));
+            return;
+          }
+          if (!isRateLimitError(r.status, data)) {
+            const errText = (data.error && data.error.message) ? data.error.message : 'Something went wrong. Try again? ❤️';
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ reply: errText }));
+            return;
+          }
+        } catch (_) {}
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ reply: "I'm a bit overloaded right now — try again in a minute? ❤️" }));
+    })();
   });
 }
 

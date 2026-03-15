@@ -1,9 +1,24 @@
 /**
  * Vercel serverless function: POST /api/chat
  * Uses Gemini with Heart AI personality. Set GEMINI_API_KEY in Vercel env.
+ * When one model hits rate limit (429/quota), tries next in GEMINI_MODEL_FALLBACK order.
  */
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const DEFAULT_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-3-flash',
+  'gemini-3.1-flash-lite'
+];
+
+function getModelList() {
+  const custom = process.env.GEMINI_MODEL;
+  if (custom) {
+    const rest = DEFAULT_MODELS.filter(function (m) { return m !== custom; });
+    return [custom].concat(rest);
+  }
+  return DEFAULT_MODELS.slice();
+}
 
 const HEART_AI_SYSTEM = `You are Heart AI, a friendly AI companion created by Haider for Zainab.
 
@@ -93,7 +108,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const geminiBody = JSON.stringify({
     contents: [{ parts: [{ text: message || 'Hello' }] }],
     systemInstruction: { parts: [{ text: systemInstruction }] },
@@ -103,31 +117,51 @@ module.exports = async function handler(req, res) {
     }
   });
 
-  try {
-    const r = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: geminiBody
-    });
-    const data = await r.json();
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (text && typeof text === 'string') {
-      res.status(200).json({ reply: text.trim() });
-      return;
-    }
-
-    const errMsg = (data.error && data.error.message) || (typeof data.error === 'string' ? data.error : '');
-    const isAuthError = r.status === 401 || r.status === 403 || /API key|invalid|permission|quota/i.test(String(errMsg));
-
-    const friendlyReply = isAuthError
-      ? "I can't connect right now. Make sure GEMINI_API_KEY is set in Vercel (Settings → Environment Variables) and your key is valid. ❤️"
-      : "Something went wrong. Check that your Gemini API key is valid and try again? ❤️";
-
-    res.status(200).json({ reply: friendlyReply });
-  } catch (err) {
-    res.status(200).json({
-      reply: "I'm having a little trouble right now. Try again in a moment? ❤️"
-    });
+  function isRateLimitError(status, data) {
+    if (status === 429) return true;
+    const msg = (data && data.error && data.error.message) ? String(data.error.message) : '';
+    return /rate limit|quota|resource exhausted|429|too many requests/i.test(msg);
   }
+
+  const models = getModelList();
+  let lastError = null;
+  let lastStatus = 0;
+
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: geminiBody
+      });
+      const data = await r.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (text && typeof text === 'string') {
+        res.status(200).json({ reply: text.trim() });
+        return;
+      }
+
+      lastStatus = r.status;
+      lastError = data;
+      if (!isRateLimitError(r.status, data)) {
+        const errMsg = (data.error && data.error.message) || (typeof data.error === 'string' ? data.error : '');
+        const isAuthError = r.status === 401 || r.status === 403 || /API key|invalid|permission/i.test(String(errMsg));
+        const friendlyReply = isAuthError
+          ? "I can't connect right now. Make sure GEMINI_API_KEY is set in Vercel (Settings → Environment Variables) and your key is valid. ❤️"
+          : "Something went wrong. Check that your Gemini API key is valid and try again? ❤️";
+        res.status(200).json({ reply: friendlyReply });
+        return;
+      }
+    } catch (err) {
+      lastError = err;
+      lastStatus = 0;
+    }
+  }
+
+  res.status(200).json({
+    reply: "I'm a bit overloaded right now — try again in a minute? ❤️"
+  });
 }

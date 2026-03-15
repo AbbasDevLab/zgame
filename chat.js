@@ -102,7 +102,7 @@
     if (welcomeShown) return;
     welcomeShown = true;
     appendMessage(
-      'Hi Zainab ❤️\nI\'m a little AI companion Haider made for you.\nWe can talk about anything.',
+      'Hi Zainab! ❤️\nI\'m the little heart Haider coded.\nWe can talk about anything.',
       false
     );
   }
@@ -113,7 +113,7 @@
     const endpoint = base + '/api/chat';
 
     if (options && options.heartOnly) {
-      appendMessage('A heart for me? Thank you Zainab ❤️', false);
+      appendMessage('A heart for me? Aw, thank you Zainab ❤️', false);
       resetIdleTimer();
       return Promise.resolve();
     }

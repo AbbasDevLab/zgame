@@ -133,7 +133,10 @@
         return res.json();
       })
       .then(function (data) {
-        const reply = (data && (data.reply || data.message || data.text)) ? (data.reply || data.message || data.text) : getMockReply(message, options);
+        let reply = (data && (data.reply || data.message || data.text)) ? (data.reply || data.message || data.text) : getMockReply(message, options);
+        if (reply && (reply.indexOf('Something went wrong') !== -1 || reply.indexOf("can't connect") !== -1)) {
+          reply = getMockReply(message, options);
+        }
         appendMessage(reply, false);
         resetIdleTimer();
       })

@@ -64,8 +64,14 @@ export default async function handler(req, res) {
 
   let payload;
   try {
-    const body = await readBody(req);
-    payload = JSON.parse(body || '{}');
+    let body = req.body;
+    if (body == null || body === '') {
+      const raw = await readBody(req);
+      body = raw ? JSON.parse(raw) : {};
+    } else if (typeof body === 'string') {
+      body = JSON.parse(body || '{}');
+    }
+    payload = body || {};
   } catch (e) {
     res.status(400).json({ error: 'Invalid JSON' });
     return;
@@ -102,17 +108,17 @@ export default async function handler(req, res) {
     const data = await r.json();
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (text) {
+    if (text && typeof text === 'string') {
       res.status(200).json({ reply: text.trim() });
       return;
     }
 
-    const errMsg = data.error?.message || data.error?.status || (typeof data.error === 'string' ? data.error : '');
-    const isAuthError = r.status === 401 || r.status === 403 || (errMsg && /API key|invalid|permission|quota/i.test(errMsg));
+    const errMsg = (data.error && data.error.message) || (typeof data.error === 'string' ? data.error : '');
+    const isAuthError = r.status === 401 || r.status === 403 || /API key|invalid|permission|quota/i.test(String(errMsg));
 
     const friendlyReply = isAuthError
-      ? "I can't connect right now — please check that the API key is set correctly. ❤️"
-      : "Something went wrong. Try again in a moment? ❤️";
+      ? "I can't connect right now. Make sure GEMINI_API_KEY is set in Vercel (Settings → Environment Variables) and your key is valid. ❤️"
+      : "Something went wrong. Check that your Gemini API key is valid and try again? ❤️";
 
     res.status(200).json({ reply: friendlyReply });
   } catch (err) {
